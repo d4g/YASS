@@ -1,5 +1,21 @@
 # YASS: Yet Another Song Selector
 
+> **This is a community fork of [DevPrice/YASS](https://github.com/DevPrice/YASS).**
+> YASS was created by [DevPrice](https://github.com/DevPrice), and nearly everything
+> here is their work. The fork adds two features:
+>
+> - **Editing YARG's setlist from a phone.** This needs the
+>   [YARG Setlist Bridge](https://github.com/d4g/YARG-Setlist-Bridge) plugin installed
+>   in YARG; see [Optional: show YARG's setlist](#optional-show-yargs-setlist). Upstream
+>   prefers to wait for native setlist support in YARG instead of a plugin (see
+>   [DevPrice/YASS#4](https://github.com/DevPrice/YASS/issues/4)), so this stays in the fork.
+> - **Sharing beyond your Wi-Fi** through a Cloudflare tunnel, with a key in the QR code.
+>   This is also offered upstream as
+>   [DevPrice/YASS#7](https://github.com/DevPrice/YASS/pull/7).
+>
+> Please report problems with this fork [here](https://github.com/d4g/YASS/issues), not
+> upstream. The fork follows upstream and merges its changes.
+
 YASS is a song browser for [YARG](https://yarg.in). It runs on the computer that hosts the
 game and serves your song library to phones on the same network. Guests can sort, filter,
 and search the library, see album art, play previews, and see which song is playing now.
@@ -7,13 +23,13 @@ and search the library, see album art, play previews, and see which song is play
 YASS reads YARG's files and never writes to them. When you scan songs in YARG, every
 connected phone updates automatically.
 
-To see YASS without installing it, [try the demo](https://devprice.github.io/YASS/).
+To see YASS without installing it, [try the demo](https://d4g.github.io/YASS/).
 
 ## Get started
 
 Before you begin, scan your songs in YARG at least once.
 
-1. From the [releases page](https://github.com/DevPrice/YASS/releases), download the file
+1. From the [releases page](https://github.com/d4g/YASS/releases), download the file
    for your operating system: the `.exe` for Windows or the `.AppImage` for Linux.
 1. Run the file on the computer that runs YARG. YASS has no installer and no window; its
    icon appears in the notification area.
@@ -21,6 +37,9 @@ Before you begin, scan your songs in YARG at least once.
    then click **Settings…**.
 1. On a phone that's on the same Wi-Fi network, scan the QR code in the popover, or enter
    the address shown there in a browser.
+
+This fork replaces upstream YASS: it uses the same settings, so switching keeps your
+configuration. Don't run both at the same time.
 
 The Windows build isn't code-signed. If SmartScreen warns you, click **More info**, and
 then click **Run anyway**.
@@ -66,7 +85,7 @@ works exactly the same, just without that.
 You need Node.js 20 or later, or Node.js 22 or later to run the tests.
 
 ```bash
-git clone --recurse-submodules https://github.com/DevPrice/YASS.git
+git clone --recurse-submodules https://github.com/d4g/YASS.git
 cd YASS
 npm install
 npm run dev
@@ -86,7 +105,8 @@ The following commands are the most common:
 
 ## License
 
-YASS is in the public domain under [the Unlicense](LICENSE). Some bundled third-party
+YASS is in the public domain under [the Unlicense](LICENSE). The original work is by
+DevPrice; the fork's changes are by d4g and are released the same way. Some bundled third-party
 material has its own license; see [Third-party notices](THIRD-PARTY-NOTICES.md).
 
 YASS is unofficial and isn't affiliated with YARC, Harmonix, Activision, or Epic Games.

@@ -15,7 +15,7 @@ import { compareVersions, parseRelease, pickUpdate, type Release } from './updat
 
 const release = (tag: string): Release => ({
   tag,
-  url: `https://github.com/DevPrice/YASS/releases/tag/${tag}`,
+  url: `https://github.com/d4g/YASS/releases/tag/${tag}`,
   publishedAt: 1_700_000_000_000,
 })
 
@@ -66,7 +66,7 @@ describe('picking an update', () => {
 
     assert.ok(state.status === 'available', `expected an update, got ${state.status}`)
     assert.equal(state.version, '1.2.0', 'the v belongs to the tag, not to what a person reads')
-    assert.equal(state.url, 'https://github.com/DevPrice/YASS/releases/tag/v1.2.0')
+    assert.equal(state.url, 'https://github.com/d4g/YASS/releases/tag/v1.2.0')
   })
 
   it('offers nothing when the running version is the latest', () => {
@@ -104,7 +104,7 @@ describe('reading GitHub’s answer', () => {
   it('takes the three fields it uses', () => {
     const parsed = parseRelease({
       tag_name: 'v1.2.0',
-      html_url: 'https://github.com/DevPrice/YASS/releases/tag/v1.2.0',
+      html_url: 'https://github.com/d4g/YASS/releases/tag/v1.2.0',
       published_at: '2026-01-02T03:04:05Z',
       // The other sixty, which we do not touch.
       assets: [{ name: 'YASS-1.2.0.exe' }],
@@ -113,7 +113,7 @@ describe('reading GitHub’s answer', () => {
 
     assert.deepEqual(parsed, {
       tag: 'v1.2.0',
-      url: 'https://github.com/DevPrice/YASS/releases/tag/v1.2.0',
+      url: 'https://github.com/d4g/YASS/releases/tag/v1.2.0',
       publishedAt: Date.parse('2026-01-02T03:04:05Z'),
     })
   })

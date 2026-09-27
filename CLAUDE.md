@@ -8,6 +8,24 @@ A song browser for [YARG](https://yarg.in). It runs on the machine hosting the g
 serves the player's library to phones on the LAN. It reads YARG's own files and never
 writes to them.
 
+## This is a fork
+
+This checkout is **d4g/YASS**, a community fork of DevPrice/YASS with its own
+releases. It carries the setlist bridge, which upstream won't take because it prefers
+native setlist support in YARG (DevPrice/YASS#4), and the Cloudflare tunnel, which is
+also offered upstream as DevPrice/YASS#7. Remotes: `origin` is DevPrice (upstream), and `fork` is d4g,
+where `master` is pushed and tagged.
+
+- `master` is the fork's release line: upstream plus both features. Bring in upstream
+  with `git fetch origin && git merge origin/master`, then push to `fork`.
+- Branches meant as upstream PRs start from `origin/master`, never from this `master`,
+  so they carry no fork-only work.
+- `desktop/src/update.ts` checks **d4g/YASS** releases. Pointing it at upstream would
+  offer fork users an "update" that removes both features.
+- Fork versions stay plain semver above upstream's (1.2.0 upstream, 1.3.0 fork). A
+  suffix like `-fork.1` would count as a prerelease, and `/releases/latest` would never
+  offer it.
+
 ## Commands
 
 Run from the repository root. `server`, `client` and `desktop` are npm workspaces;

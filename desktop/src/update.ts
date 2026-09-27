@@ -32,8 +32,12 @@ import type { UpdateState } from './ipc.js'
  * `desktop/package.json` has no `repository` field and is packaged inside the
  * asar; adding one and parsing it out at runtime to rebuild a URL that has
  * never changed is more indirection than the constant it would replace.
+ *
+ * The fork's releases, not upstream's. This build carries the setlist bridge
+ * and the Cloudflare tunnel; upstream's release has neither, so pointing here at
+ * DevPrice/YASS would offer every fork user an "update" that removes both.
  */
-const REPO = 'DevPrice/YASS'
+const REPO = 'd4g/YASS'
 const LATEST_RELEASE = `https://api.github.com/repos/${REPO}/releases/latest`
 
 /** Long enough for a slow connection, short enough that a hang ends. */
