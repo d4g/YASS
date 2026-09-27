@@ -250,7 +250,11 @@ and on Linux extract the AppImage and launch it under `xvfb` until it answers on
 `127.0.0.1:4321`. It is a `workflow_call` reusable workflow with one optional `version`
 input, and both other workflows call it, so a release ships what CI has been checking.
 
-- `ci.yml` — every push to master, no version input.
+- `ci.yml` — every push to master, no version input. On master it then publishes the
+  build as the rolling **`nightly` pre-release**: the `nightly` tag is moved to the
+  commit, and the files are replaced as `YASS-nightly.exe` / `YASS-nightly-x86_64.AppImage`.
+  Features collect there between stable releases. The update check never offers it,
+  because `/releases/latest` skips pre-releases.
 - `release.yml` — every `v*` tag, with `version: ${{ github.ref_name }}`.
 - `pages.yml` — the demo to GitHub Pages, on pushes touching the client.
 

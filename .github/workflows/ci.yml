@@ -1,6 +1,12 @@
 # Every push to master, checked and packaged on both platforms. The work is in
 # build.yml, which release.yml calls too — so a release ships the same artifact
 # this has been building all along, put together the same way.
+#
+# And then published as the rolling `nightly` pre-release: one release, always
+# holding what master built last, so a feature can be tried from the releases
+# page before it is in a stable version. A pre-release on purpose — GitHub's
+# `/releases/latest` skips those, and that is the address the tray's update
+# check asks, so nobody on a stable build is ever offered a nightly.
 name: CI
 
 on:
@@ -19,3 +25,57 @@ jobs:
     # No version input: CI packages whatever the package.json files say, which
     # is the point of them saying it.
     uses: ./.github/workflows/build.yml
+
+  nightly:
+    needs: build
+    # Only master's builds; a manual run on another branch is a check, not a
+    # nightly.
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    # Moving the `nightly` tag and replacing the release's files both write to
+    # the repository. Nothing else in this workflow does.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      # No checkout, as in release.yml: `gh` needs a repository, not a working
+      # copy. The commit and its date come from the event.
+      - name: Publish the nightly
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          # Named for what they are, so a nightly in somebody's Downloads folder
+          # is never mistaken for the stable `YASS.exe` beside it.
+          mkdir upload
+          cp artifacts/YASS*.exe upload/YASS-nightly.exe
+          cp artifacts/YASS*.AppImage upload/YASS-nightly-x86_64.AppImage
+          ls -l upload
+
+          # The tag follows master. Created the first time, moved every time
+          # after; either way it names the commit these files were built from.
+          if gh api "repos/$GH_REPO/git/refs/tags/nightly" > /dev/null 2>&1; then
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/nightly" -f sha="$SHA" -F force=true > /dev/null
+          else
+            gh api -X POST "repos/$GH_REPO/git/refs" -f ref=refs/tags/nightly -f sha="$SHA" > /dev/null
+          fi
+
+          SHORT="${SHA:0:7}"
+          DATE="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          NOTES="The latest build of master: [\`$SHORT\`](https://github.com/$GH_REPO/commit/$SHA), built $DATE.
+
+          It has everything merged since the last release, and nothing about it has been tested by hand. For a party, use the [latest release](https://github.com/$GH_REPO/releases/latest) instead. The update check never offers a nightly."
+
+          if gh release view nightly > /dev/null 2>&1; then
+            gh release upload nightly upload/* --clobber
+            gh release edit nightly --notes "$NOTES" --prerelease --latest=false
+          else
+            gh release create nightly upload/*               --title "Nightly"               --notes "$NOTES"               --prerelease               --latest=false
+          fi
+
+          echo "::notice::nightly updated to $SHORT"
