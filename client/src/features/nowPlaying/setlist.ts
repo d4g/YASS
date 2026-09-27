@@ -9,7 +9,7 @@
  * Kept apart from the banner so the rules are testable without rendering it.
  */
 
-import type { Setlist, Song } from '@shared/types'
+import type { GuestTag, Setlist, Song } from '@shared/types'
 import { formatTitleCredit } from '../../lib/format'
 
 export interface SetlistSummary {
@@ -25,6 +25,8 @@ export interface SetlistSummary {
    * since YARG last scanned).
    */
   next: string | null
+  /** Who added the next song, when a guest did through YASS. */
+  nextBy: GuestTag | null
   isLast: boolean
 }
 
@@ -35,11 +37,12 @@ export function summarizeSetlist(setlist: Setlist, songsById: ReadonlyMap<string
   const total = setlist.songs.length
 
   if (setlist.mode === 'building' || setlist.index === null) {
-    return { mode: 'building', position: null, total, next: null, isLast: false }
+    return { mode: 'building', position: null, total, next: null, nextBy: null, isLast: false }
   }
 
   const isLast = setlist.index >= total - 1
-  const nextId = isLast ? null : (setlist.songs[setlist.index + 1]?.libraryId ?? null)
+  const nextEntry = isLast ? undefined : setlist.songs[setlist.index + 1]
+  const nextId = nextEntry?.libraryId ?? null
   const nextSong = nextId === null ? undefined : songsById.get(nextId)
 
   return {
@@ -47,6 +50,7 @@ export function summarizeSetlist(setlist: Setlist, songsById: ReadonlyMap<string
     position: setlist.index + 1,
     total,
     next: nextSong === undefined ? null : formatTitleCredit(nextSong),
+    nextBy: nextEntry?.addedBy ?? null,
     isLast,
   }
 }

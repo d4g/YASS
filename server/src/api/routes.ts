@@ -9,7 +9,8 @@
 import { Hono, type Context } from 'hono'
 import { streamSSE } from 'hono/streaming'
 
-import type { ServerStatus, SetlistEditError, Settings } from '@shared/types.js'
+import type { GuestInfo, ServerStatus, SetlistEditError, Settings } from '@shared/types.js'
+import { GUEST_HEADER } from '../core/guests.js'
 import { normalizeHash } from '../core/hash.js'
 import type { SetlistEditResult } from '../core/setlistBridge.js'
 import type { AppState } from '../state.js'
@@ -286,7 +287,7 @@ export function createApiRoutes(state: AppState, binding: Binding): Hono {
       // next song change.
       await send('now-playing', state.watcher.current)
       await send('venue', state.venue.current)
-      await send('setlist', state.setlist.current)
+      await send('setlist', state.setlistView)
 
       const unsubscribeNowPlaying = state.watcher.subscribe((next) => {
         void send('now-playing', next)
@@ -300,7 +301,7 @@ export function createApiRoutes(state: AppState, binding: Binding): Hono {
         void send('venue', next)
       })
 
-      const unsubscribeSetlist = state.setlist.subscribe((next) => {
+      const unsubscribeSetlist = state.subscribeSetlist((next) => {
         void send('setlist', next)
       })
 
@@ -336,7 +337,7 @@ export function createApiRoutes(state: AppState, binding: Binding): Hono {
    */
   api.get('/setlist', (c) => {
     c.header('Cache-Control', 'no-store')
-    return c.json(state.setlist.current)
+    return c.json(state.setlistView)
   })
 
   /*
@@ -362,7 +363,14 @@ export function createApiRoutes(state: AppState, binding: Binding): Hono {
 
   const invalid = (c: Context) => c.json({ ok: false, error: 'invalid' }, 400)
 
-  /** Add a song: `{ hash, index?, version? }`. Without `index`, it goes at the end. */
+  /**
+   * Add a song: `{ hash, index?, version? }`. Without `index`, it goes at the end.
+   *
+   * Also where a phone becomes a guest. The `X-YASS-Guest` header names the
+   * guest it already is; without one, or with one from before the server
+   * restarted, it is handed a new animal. Either way the answer carries the
+   * guest, so the phone can keep the id — whether or not YARG took the song.
+   */
   api.post('/setlist/songs', async (c) => {
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null
     const hash = normalizeHash(typeof body?.hash === 'string' ? body.hash : null)
@@ -370,7 +378,18 @@ export function createApiRoutes(state: AppState, binding: Binding): Hono {
     const version = optionalIndex(body?.version)
     if (hash === null || index === false || version === false) return invalid(c)
 
-    return reply(c, await state.setlist.edit({ type: 'add', hash, index, version }))
+    const guest = state.guests.identify(c.req.header(GUEST_HEADER))
+    const attributed = state.guests.attribute(hash, guest.id)
+
+    const result = await state.setlist.edit({ type: 'add', hash, index, version })
+    if (attributed) {
+      if (result.ok) state.guests.confirm(hash)
+      else state.guests.forget(hash)
+    }
+
+    return result.ok
+      ? c.json({ ok: true, guest })
+      : c.json({ ok: false, error: result.code, guest }, SETLIST_ERROR_STATUS[result.code])
   })
 
   /** Move a song so it ends up at `index`: `{ index, version? }`. */
@@ -399,6 +418,47 @@ export function createApiRoutes(state: AppState, binding: Binding): Hono {
     if (version === false) return invalid(c)
 
     return reply(c, await state.setlist.edit({ type: 'clear', version }))
+  })
+
+  // --- Guests -------------------------------------------------------------
+  //
+  // A guest is who added a song: an animal, a colour and a name, handed out on
+  // the first add. See `core/guests.ts`. Both routes act only on the guest the
+  // `X-YASS-Guest` header names, and never create one.
+
+  /** Who this phone is, if anybody yet, and which animals it could switch to. */
+  api.get('/guest', (c) => {
+    c.header('Cache-Control', 'no-store')
+    const info: GuestInfo = {
+      guest: state.guests.get(c.req.header(GUEST_HEADER)),
+      available: state.guests.available(),
+    }
+    return c.json(info)
+  })
+
+  /** Change this guest's name and/or animal: `{ name?: string | null, emoji?: string }`. */
+  api.put('/guest', async (c) => {
+    const id = c.req.header(GUEST_HEADER)
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null
+    if (!id || body === null) return c.json({ ok: false, error: 'invalid' }, 400)
+
+    const name = body.name
+    const emoji = body.emoji
+    if (
+      (name !== undefined && name !== null && typeof name !== 'string') ||
+      (emoji !== undefined && typeof emoji !== 'string')
+    ) {
+      return c.json({ ok: false, error: 'invalid' }, 400)
+    }
+
+    const result = state.guests.update(id, {
+      ...(name !== undefined ? { name } : {}),
+      ...(emoji !== undefined ? { emoji } : {}),
+    })
+    if (result.ok) return c.json({ ok: true, guest: result.guest })
+
+    const status = { not_found: 404, taken: 409, invalid: 400 } as const
+    return c.json({ ok: false, error: result.error }, status[result.error])
   })
 
   // --- Album art ----------------------------------------------------------

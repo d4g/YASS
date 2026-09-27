@@ -20,9 +20,9 @@ const setlist = (patch: Partial<Setlist>): Setlist => ({
   mode: 'playing',
   index: 0,
   songs: [
-    { hash: A, libraryId: 'a' },
-    { hash: B, libraryId: 'b' },
-    { hash: C, libraryId: null },
+    { hash: A, libraryId: 'a', addedBy: null },
+    { hash: B, libraryId: 'b', addedBy: { emoji: '🦊', name: 'Fox', color: 'sky' } },
+    { hash: C, libraryId: null, addedBy: null },
   ],
   updatedAt: 1,
   ...patch,
@@ -40,16 +40,18 @@ describe('summarizeSetlist', () => {
       position: null,
       total: 3,
       next: null,
+      nextBy: null,
       isLast: false,
     })
   })
 
-  it('names the next song from the library', () => {
+  it('names the next song from the library, and who added it', () => {
     assert.deepEqual(summarizeSetlist(setlist({ index: 0 }), songs), {
       mode: 'playing',
       position: 1,
       total: 3,
       next: 'Second',
+      nextBy: { emoji: '🦊', name: 'Fox', color: 'sky' },
       isLast: false,
     })
   })

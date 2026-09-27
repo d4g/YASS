@@ -249,6 +249,31 @@
   --accent-fill: color-mix(in srgb, var(--yarg-vivid-sky-blue) 75%, transparent);
 }
 
+/*
+ * Guests — who added a song to the setlist (see `server/src/core/guests.ts`).
+ *
+ * Eight, because that is about as many as stay apart at a glance on this dark a
+ * page; the animal beside each carries the rest. Five are the palette's own. Red
+ * and purple are lighter than `imperial-red` and `veronica`, which fall under
+ * 4.5:1 on the tinted tag; pink and periwinkle are YASS's, to reach eight. Every
+ * one measures 5.6:1 or better against the card, the hover row and the tag's own
+ * 16% wash of itself.
+ *
+ * Outside `@theme` for the reason above, and one more: `GuestTag` picks the
+ * variable by name at runtime, so Tailwind never sees the names written out and
+ * would drop every one of them from the build as unused.
+ */
+:root {
+  --guest-sky: var(--yarg-vivid-sky-blue);
+  --guest-emerald: var(--yarg-emerald);
+  --guest-mustard: var(--yarg-mustard);
+  --guest-orange: var(--yarg-ut-orange);
+  --guest-pink: #ff7ad9;
+  --guest-purple: #b98bff;
+  --guest-red: #ff5c66;
+  --guest-periwinkle: #8fa2ff;
+}
+
 @layer base {
   html {
     /* The list owns scrolling; don't let iOS rubber-band the page. */

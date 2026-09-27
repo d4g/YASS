@@ -10,6 +10,9 @@
  * state comes from the event stream, not from this component's own request:
  * the setlist can also change from the console or another phone, and the
  * stream is the one account of it every surface agrees on.
+ *
+ * Both states also say who added it — the song's guest tag — and, once this
+ * phone has added anything, who this phone is, with the way to change it.
  */
 
 import { useState } from 'react'
@@ -17,6 +20,8 @@ import { useState } from 'react'
 import type { Setlist, SetlistEditError, Song } from '@shared/types'
 import { Button } from '../../ui'
 import { addToSetlist } from '../../lib/api'
+import { GuestTag } from '../guests/GuestTag'
+import { YouAre } from '../guests/YouAre'
 import { describeSetlistError } from './messages'
 
 export function AddToSetlist({ song, setlist }: { song: Song; setlist: Setlist }) {
@@ -29,10 +34,22 @@ export function AddToSetlist({ song, setlist }: { song: Song; setlist: Setlist }
   const position = setlist.songs.findIndex((entry) => entry.hash === hash)
 
   if (position >= 0) {
+    const addedBy = setlist.songs[position]?.addedBy ?? null
     return (
-      <p className="yarg-label text-[11px] text-content-muted" role="status">
-        {placement(setlist, position)}
-      </p>
+      <div className="flex flex-col items-start gap-[10px]">
+        <p className="flex flex-wrap items-center gap-x-[6px] gap-y-[4px]" role="status">
+          <span className="yarg-label text-[11px] text-content-muted">
+            {placement(setlist, position)}
+          </span>
+          {addedBy ? (
+            <>
+              <span className="yarg-label text-[11px] text-content-muted">· added by</span>
+              <GuestTag tag={addedBy} />
+            </>
+          ) : null}
+        </p>
+        <YouAre />
+      </div>
     )
   }
 
@@ -54,6 +71,7 @@ export function AddToSetlist({ song, setlist }: { song: Song; setlist: Setlist }
       <p className="text-[13px] leading-tight text-content-muted empty:hidden" aria-live="polite">
         {error ? describeSetlistError(error) : null}
       </p>
+      <YouAre />
     </div>
   )
 }

@@ -51,6 +51,8 @@ import {
   type SetlistEditOutcome,
 } from '../../lib/api'
 import { formatDuration, formatTitleCredit } from '../../lib/format'
+import { GuestTag } from '../guests/GuestTag'
+import { YouAre } from '../guests/YouAre'
 import { reorder, useDragReorder } from './dragReorder'
 import { describeSetlistError } from './messages'
 
@@ -196,6 +198,8 @@ export function SetlistView({
         >
           {error ? describeSetlistError(error) : null}
         </p>
+
+        <YouAre className="basis-full" />
       </div>
 
       {total === 0 ? (
@@ -336,14 +340,24 @@ function SetlistRow({
         >
           {song ? <SongTitle song={song} /> : 'Not in this library'}
         </span>
-        <span className="min-w-0 text-[14px] leading-none font-medium text-content-secondary italic @2xl/list:text-[18px]">
-          {song ? (
-            <ArtistName song={song} credit="label" />
-          ) : (
-            <span className="font-numeric text-content-muted not-italic">
-              {entry.hash.slice(0, 12)}
-            </span>
-          )}
+        {/*
+         * Who added it sits at the end of the artist line, so a row stays two
+         * lines tall; the artist gives way first when the width runs out, and
+         * the tag keeps at least its animal.
+         */}
+        <span className="flex min-w-0 items-center gap-[8px]">
+          <span className="min-w-0 truncate text-[14px] leading-none font-medium text-content-secondary italic @2xl/list:text-[18px]">
+            {song ? (
+              <ArtistName song={song} credit="label" />
+            ) : (
+              <span className="font-numeric text-content-muted not-italic">
+                {entry.hash.slice(0, 12)}
+              </span>
+            )}
+          </span>
+          {entry.addedBy ? (
+            <GuestTag tag={entry.addedBy} label="Added by" className="max-w-[45%] shrink-0" />
+          ) : null}
         </span>
       </span>
       {song ? (

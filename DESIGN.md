@@ -389,6 +389,19 @@ pointer, up and down are visually hidden but stay for screen readers, so a phone
 remove and the grip and the title keeps its width. **Clear** takes two presses, turning
 danger-red on the first; there is no modal.
 
+### Guest Tag
+Who added a setlist song: the guest's animal emoji and name ("🦊 Fox") on a pill, the text
+in the guest's colour over a 16% wash of it. Eight guest colours (`--guest-*` in
+`index.css`), each 5.6:1 or better on the card, the hover row and the tag's own wash. Colour
+never stands alone; the animal and the name are always beside it. The tag ends the artist
+line of a setlist row (the artist gives way first), follows "In the setlist" in the song
+detail, and sits beside **up next** in the banner. A song added in YARG itself has no tag.
+
+A guest's own marker is the same pill as a button, after "You're", under **Add to
+setlist** and in the setlist bar, once the phone has added a song. It opens an editor in
+place, never a modal: a name field (placeholder: the animal's name) and a grid of the free
+animals, the guest's own ringed in their colour.
+
 ### Art Plate (signature)
 A square slot on Sunken Night with a Selected Blue wash from the top corner. Until real art
 arrives it carries the song's own title as Display type. Nothing around it may be arranged

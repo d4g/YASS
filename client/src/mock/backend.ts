@@ -23,7 +23,17 @@
  * two people looking at the demo side by side should see the same thing.
  */
 
-import type { NowPlaying, NowPlayingSong, Setlist, Song, SongLibrary, VenueState } from '@shared/types'
+import type {
+  GuestTag,
+  NowPlaying,
+  NowPlayingSong,
+  OwnGuest,
+  Setlist,
+  Song,
+  SongLibrary,
+  VenueState,
+} from '@shared/types'
+import { GUEST_ANIMALS } from '@shared/types'
 import type { LightingCue, PostProcessing } from '@shared/types'
 import { buildMockLibrary } from './library'
 
@@ -119,6 +129,89 @@ let queue: Song[] = []
 let queueIndex = 0
 let setlistVersion = 0
 
+/**
+ * Guests, the demo's way.
+ *
+ * One visitor is one guest, handed an animal on their first add like on a
+ * real host. The walk through the library the demo starts with is credited to
+ * a few made-up guests, so the tags are on screen before anybody adds a thing.
+ */
+const DEMO_GUESTS: GuestTag[] = [
+  { emoji: '🐼', name: 'Panda', color: 'sky' },
+  { emoji: '🦖', name: 'Sam', color: 'emerald' },
+  { emoji: '🦩', name: 'Flamingo', color: 'pink' },
+]
+let you: OwnGuest | null = null
+const addedByYou = new Set<string>()
+
+/**
+ * Who added each song of the starting setlist, by song — never by position,
+ * which is what the real server does too: move a song and its tag goes with it.
+ */
+const credits = new Map<string, GuestTag>()
+
+/** Hand out the made-up guests over the starting walk, once. */
+function creditStartingSetlist(songs: readonly Song[]): void {
+  songs.forEach((song, position) => {
+    // Every fourth song as if added in YARG itself, which carries no tag.
+    const guest = position % 4 === 3 ? undefined : DEMO_GUESTS[position % DEMO_GUESTS.length]
+    if (song.hash !== null && guest !== undefined) credits.set(song.hash, guest)
+  })
+}
+
+function addedBy(hash: string): GuestTag | null {
+  if (addedByYou.has(hash)) return you
+  return credits.get(hash) ?? null
+}
+
+function takenAnimals(): Set<string> {
+  return new Set([...DEMO_GUESTS.map((guest) => guest.emoji), ...(you ? [you.emoji] : [])])
+}
+
+function freeAnimals(): string[] {
+  const taken = takenAnimals()
+  return GUEST_ANIMALS.map((animal) => animal.emoji).filter((emoji) => !taken.has(emoji))
+}
+
+function becomeGuest(): OwnGuest {
+  if (you) return you
+  const free = freeAnimals()
+  const emoji = free[Math.floor(Math.random() * free.length)] ?? '🦊'
+  you = {
+    id: 'demo',
+    emoji,
+    name: GUEST_ANIMALS.find((animal) => animal.emoji === emoji)?.name ?? 'Guest',
+    customName: null,
+    color: 'mustard',
+  }
+  return you
+}
+
+function guestRoute(method: string, body: Record<string, unknown> | null): Response {
+  if (method === 'PUT') {
+    if (!you) return new Response(JSON.stringify({ ok: false, error: 'not_found' }), { status: 404 })
+
+    let { emoji, customName } = you
+    if (typeof body?.emoji === 'string' && body.emoji !== emoji) {
+      if (!freeAnimals().includes(body.emoji)) {
+        return new Response(JSON.stringify({ ok: false, error: 'taken' }), { status: 409 })
+      }
+      emoji = body.emoji
+    }
+    if (body && 'name' in body) {
+      const typed = typeof body.name === 'string' ? body.name.trim().slice(0, 24) : ''
+      customName = typed === '' ? null : typed
+    }
+    const animal = GUEST_ANIMALS.find((entry) => entry.emoji === emoji)?.name ?? 'Guest'
+    you = { ...you, emoji, customName, name: customName ?? animal }
+
+    publishSetlist()
+    return json({ ok: true, guest: you })
+  }
+
+  return json({ guest: you, available: freeAnimals() })
+}
+
 function publishSetlist(): void {
   setlistVersion += 1
   setSetlist({
@@ -127,7 +220,11 @@ function publishSetlist(): void {
     version: setlistVersion,
     mode: 'playing',
     index: queueIndex,
-    songs: queue.map((entry) => ({ hash: entry.hash ?? '', libraryId: entry.id })),
+    songs: queue.map((entry) => ({
+      hash: entry.hash ?? '',
+      libraryId: entry.id,
+      addedBy: addedBy(entry.hash ?? ''),
+    })),
     updatedAt: Date.now(),
   })
 }
@@ -149,6 +246,8 @@ function editSetlist(method: string, route: string, body: Record<string, unknown
     const song = getLibrary().songs.find((candidate) => candidate.hash === hash)
     if (song === undefined) return refuse('unknown_song', 404)
     queue.push(song)
+    becomeGuest()
+    addedByYou.add(hash)
   } else if (method === 'DELETE' && route === '/setlist/songs') {
     queue.splice(firstEditable)
   } else {
@@ -164,7 +263,7 @@ function editSetlist(method: string, route: string, body: Record<string, unknown
   }
 
   publishSetlist()
-  return json({ ok: true })
+  return json({ ok: true, ...(you ? { guest: you } : {}) })
 }
 let timers: number[] = []
 let step = 0
@@ -253,7 +352,10 @@ function advance(): void {
   // than grown for as long as the tab is open.
   timers = []
 
-  if (queue.length === 0) queue = [...playlist(getLibrary().songs)]
+  if (queue.length === 0) {
+    queue = [...playlist(getLibrary().songs)]
+    creditStartingSetlist(queue)
+  }
   queueIndex = step % queue.length
   const song = queue[queueIndex]
   step += 1
@@ -331,6 +433,10 @@ function installFetch(): void {
     if (route === '/songs') return json(getLibrary())
     if (route === '/now-playing') return json(nowPlaying)
     if (route === '/setlist') return json(setlist)
+    if (route === '/guest') {
+      const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : null
+      return guestRoute(init?.method ?? 'GET', body)
+    }
     if (route.startsWith('/setlist/')) {
       const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : null
       return editSetlist(init?.method ?? 'GET', route, body)

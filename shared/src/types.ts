@@ -312,6 +312,108 @@ export interface SetlistEntry {
   hash: string
   /** Matching `Song.id` from the library, when the hash joins. */
   libraryId: string | null
+  /**
+   * The guest who added it through YASS. Null for a song added in YARG itself,
+   * or before the server last started — see `server/src/core/guests.ts`.
+   */
+  addedBy: GuestTag | null
+}
+
+// --- Guests -----------------------------------------------------------------
+
+/**
+ * The animals a guest can be, in the order the picker shows them.
+ *
+ * Forty, each one easy to say out loud ("whose is the fox?") and unlike the
+ * others at a glance: no two bears, no dog beside the wolf, one bird of each
+ * kind. Animals rather than instruments because the song detail already draws
+ * instrument icons, and a guitar meaning a person there would be a riddle. All
+ * from Unicode 12 (2019) or earlier, so every phone of the last several years
+ * draws them. `name` is the display name until the guest types their own.
+ */
+export const GUEST_ANIMALS = [
+  { emoji: '🦊', name: 'Fox' },
+  { emoji: '🐼', name: 'Panda' },
+  { emoji: '🐸', name: 'Frog' },
+  { emoji: '🐙', name: 'Octopus' },
+  { emoji: '🦉', name: 'Owl' },
+  { emoji: '🐢', name: 'Turtle' },
+  { emoji: '🦄', name: 'Unicorn' },
+  { emoji: '🐧', name: 'Penguin' },
+  { emoji: '🐨', name: 'Koala' },
+  { emoji: '🦁', name: 'Lion' },
+  { emoji: '🐯', name: 'Tiger' },
+  { emoji: '🐮', name: 'Cow' },
+  { emoji: '🐷', name: 'Pig' },
+  { emoji: '🐵', name: 'Monkey' },
+  { emoji: '🐔', name: 'Chicken' },
+  { emoji: '🦆', name: 'Duck' },
+  { emoji: '🦋', name: 'Butterfly' },
+  { emoji: '🐝', name: 'Bee' },
+  { emoji: '🐞', name: 'Ladybug' },
+  { emoji: '🦀', name: 'Crab' },
+  { emoji: '🐬', name: 'Dolphin' },
+  { emoji: '🐳', name: 'Whale' },
+  { emoji: '🦈', name: 'Shark' },
+  { emoji: '🐊', name: 'Crocodile' },
+  { emoji: '🦒', name: 'Giraffe' },
+  { emoji: '🦓', name: 'Zebra' },
+  { emoji: '🐘', name: 'Elephant' },
+  { emoji: '🦔', name: 'Hedgehog' },
+  { emoji: '🦘', name: 'Kangaroo' },
+  { emoji: '🐰', name: 'Rabbit' },
+  { emoji: '🐻', name: 'Bear' },
+  { emoji: '🐺', name: 'Wolf' },
+  { emoji: '🦇', name: 'Bat' },
+  { emoji: '🐍', name: 'Snake' },
+  { emoji: '🦖', name: 'T-Rex' },
+  { emoji: '🐌', name: 'Snail' },
+  { emoji: '🦩', name: 'Flamingo' },
+  { emoji: '🦥', name: 'Sloth' },
+  { emoji: '🦦', name: 'Otter' },
+  { emoji: '🐹', name: 'Hamster' },
+] as const
+
+/**
+ * A guest's colour, by name. The values are CSS tokens in the client's
+ * `index.css` (`--guest-*`), each checked at 5.6:1 or better against the
+ * card, the hover row and the tinted tag it sits on.
+ */
+export const GUEST_COLORS = [
+  'sky',
+  'emerald',
+  'mustard',
+  'orange',
+  'pink',
+  'purple',
+  'red',
+  'periwinkle',
+] as const
+
+export type GuestColor = (typeof GUEST_COLORS)[number]
+
+/** How a guest appears to everybody: "🦊 Fox", in their colour. */
+export interface GuestTag {
+  emoji: string
+  /** The name they typed, or their animal's name. */
+  name: string
+  color: GuestColor
+}
+
+/**
+ * How a guest appears to themselves. Carries the id that lets the phone act as
+ * this guest, so it only ever goes back to that phone.
+ */
+export interface OwnGuest extends GuestTag {
+  id: string
+  /** What they typed, or null while they go by the animal's name. */
+  customName: string | null
+}
+
+/** `GET /api/guest`: who this phone is, and which animals are free to switch to. */
+export interface GuestInfo {
+  guest: OwnGuest | null
+  available: string[]
 }
 
 /**

@@ -5,8 +5,9 @@
  * and behind a reverse proxy on a custom domain.
  */
 
-import type { NowPlaying, Setlist, SetlistEditError, SongLibrary } from '@shared/types'
+import type { NowPlaying, OwnGuest, Setlist, SetlistEditError, SongLibrary } from '@shared/types'
 import { mockArtUrl } from '../mock/art'
+import { guestHeaders, rememberGuest } from './guest'
 
 /**
  * True only in the published demo build (`vite build --mode mock`).
@@ -66,7 +67,12 @@ async function sendSetlistEdit(method: string, path: string, body?: unknown): Pr
   try {
     response = await fetch(path, {
       method,
-      headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      headers: {
+        Accept: 'application/json',
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        // Who is making the edit; the server records it on adds. See `guest.ts`.
+        ...guestHeaders(),
+      },
       body: body ? JSON.stringify(body) : undefined,
     })
   } catch {
@@ -75,7 +81,14 @@ async function sendSetlistEdit(method: string, path: string, body?: unknown): Pr
     return { ok: false, error: 'unavailable' }
   }
 
-  const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: SetlistEditError } | null
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean
+    error?: SetlistEditError
+    guest?: OwnGuest
+  } | null
+  // An add answers with the guest it was recorded for — new on a phone's first
+  // add, or after the server restarted — whether or not YARG took the song.
+  if (payload?.guest) rememberGuest(payload.guest)
   if (response.ok && payload?.ok) return { ok: true }
   return { ok: false, error: payload?.error ?? 'failed' }
 }

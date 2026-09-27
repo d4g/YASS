@@ -126,6 +126,13 @@ and just means "unavailable, retry". Like the venue stream it is purely additive
 the plugin the `setlist` event says `available: false` and the banner is unchanged. This is
 the one place the app talks to YARG's process rather than its files.
 
+**Who added a song is YASS's own knowledge**, because YARG's setlist is only hashes.
+`server/src/core/guests.ts` hands a phone an animal emoji, its name and one of eight
+colours on its first add (the `X-YASS-Guest` header carries the id after that), and maps
+each queued hash to the guest who added it. `AppState.setlistView` joins those tags into
+every setlist a client is sent. It is kept in memory on purpose: guests arrive through the
+tunnel, whose address and so their stored ids change on every restart.
+
 **Edits go through the same connection** (plugin protocol 2): `/api/setlist/songs` and its
 sub-routes send a command, wait for YARG's `result`, and answer with that. They never return
 the new setlist — it arrives over `/api/events` like any other change, so no client merges a

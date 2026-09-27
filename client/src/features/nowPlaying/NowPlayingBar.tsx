@@ -29,6 +29,7 @@ import { ArtistName, SongTitle, SourceBadge } from '../../ui/library'
 import { currentArtUrl } from '../../lib/api'
 import { formatArtistCredit, formatDuration, formatTitleCredit } from '../../lib/format'
 import { useVenue } from '../../lib/useVenue'
+import { GuestTag } from '../guests/GuestTag'
 import type { SetlistSummary } from './setlist'
 import { useVenueWash } from './venueWash'
 import type { VenueWash } from './venueWash'
@@ -405,7 +406,12 @@ function UpNext({ summary }: { summary: SetlistSummary }) {
 
   return (
     <div className="min-w-0 max-w-[240px] short:hidden">
-      <dt className="yarg-label text-[10px] text-count-muted">up next</dt>
+      <dt className="flex min-w-0 items-center gap-[6px]">
+        <span className="yarg-label shrink-0 text-[10px] text-count-muted">up next</span>
+        {summary.nextBy ? (
+          <GuestTag tag={summary.nextBy} label="added by" className="py-0 text-[11px]" />
+        ) : null}
+      </dt>
       <dd
         dir="auto"
         className={cx(

@@ -6,7 +6,8 @@
  * process or a test without going through Hono.
  */
 
-import type { LibraryMeta, Settings, SettingsView, SongLibrary } from '@shared/types.js'
+import type { LibraryMeta, Setlist, Settings, SettingsView, SongLibrary } from '@shared/types.js'
+import { Guests } from './core/guests.js'
 import { FileWatcher } from './core/fileWatcher.js'
 import { emptyLibrary, loadLibraryFromCache } from './core/library.js'
 import { NowPlayingWatcher } from './core/nowPlaying.js'
@@ -84,6 +85,8 @@ export class AppState {
    * reports `available: false` and nothing else changes.
    */
   #setlist: SetlistBridge
+  /** Who added which song to the setlist. See `core/guests.ts`. */
+  #guests = new Guests()
   #librarySubscribers = new Set<(meta: LibraryMeta) => void>()
   #reloadSubscribers = new Set<() => void>()
 
@@ -100,6 +103,12 @@ export class AppState {
     this.#setlist = new SetlistBridge({
       getDataDir: () => this.#effective.yargDataDir,
       resolveLibraryId: (hash) => this.#byHash.get(hash) ?? null,
+    })
+
+    // Before anybody else subscribes, so every reader of an update sees the
+    // attributions of songs that left the setlist already gone.
+    this.#setlist.subscribe((next) => {
+      this.#guests.retain(next.songs.map((entry) => entry.hash))
     })
 
     // YARG rewrites its cache whenever it rescans, which is exactly when songs
@@ -260,6 +269,41 @@ export class AppState {
 
   get setlist(): SetlistBridge {
     return this.#setlist
+  }
+
+  get guests(): Guests {
+    return this.#guests
+  }
+
+  /**
+   * YARG's setlist with each song's "added by" filled in.
+   *
+   * What every client is sent. The bridge reports YARG; the tags are this
+   * server's own knowledge, joined in here so there is one place that does it.
+   */
+  get setlistView(): Setlist {
+    return this.#decorate(this.#setlist.current)
+  }
+
+  /**
+   * Hear about the setlist as clients see it: when YARG's list changes, and
+   * when a guest renames themselves or switches animal, which changes how
+   * rows they added read without YARG's list changing at all.
+   */
+  subscribeSetlist(listener: (setlist: Setlist) => void): () => void {
+    const unsubscribeBridge = this.#setlist.subscribe((next) => listener(this.#decorate(next)))
+    const unsubscribeGuests = this.#guests.subscribe(() => listener(this.setlistView))
+    return () => {
+      unsubscribeBridge()
+      unsubscribeGuests()
+    }
+  }
+
+  #decorate(setlist: Setlist): Setlist {
+    return {
+      ...setlist,
+      songs: setlist.songs.map((entry) => ({ ...entry, addedBy: this.#guests.tagFor(entry.hash) })),
+    }
   }
 
   /** Re-read the song list from disk and rebuild the hash join index. */

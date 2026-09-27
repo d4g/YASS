@@ -459,7 +459,12 @@ export class SetlistBridge {
       version: raw.version,
       mode: raw.mode,
       index: raw.index,
-      songs: raw.hashes.map((hash) => ({ hash, libraryId: this.#options.resolveLibraryId(hash) })),
+      songs: raw.hashes.map((hash) => ({
+        hash,
+        libraryId: this.#options.resolveLibraryId(hash),
+        // Filled in by `AppState.setlistView`: the bridge knows YARG, not guests.
+        addedBy: null,
+      })),
       updatedAt: Date.now(),
     })
   }

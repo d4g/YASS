@@ -188,8 +188,8 @@ describe('SetlistBridge', () => {
     await waitFor('the first state', () => bridge.current.available)
     assert.equal(bridge.current.mode, 'building')
     assert.deepEqual(bridge.current.songs, [
-      { hash: A, libraryId: 'song-a' },
-      { hash: B, libraryId: null },
+      { hash: A, libraryId: 'song-a', addedBy: null },
+      { hash: B, libraryId: null, addedBy: null },
     ])
   })
 
