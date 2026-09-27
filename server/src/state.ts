@@ -10,6 +10,7 @@ import type { LibraryMeta, Settings, SettingsView, SongLibrary } from '@shared/t
 import { FileWatcher } from './core/fileWatcher.js'
 import { emptyLibrary, loadLibraryFromCache } from './core/library.js'
 import { NowPlayingWatcher } from './core/nowPlaying.js'
+import { SetlistBridge } from './core/setlistBridge.js'
 import { VenueStream } from './core/venueStream.js'
 import { fetchFfmpeg } from './media/ffmpeg.js'
 import { songCachePath } from './core/paths.js'
@@ -77,6 +78,12 @@ export class AppState {
    * the app behaves exactly as it did before this existed.
    */
   #venue = new VenueStream()
+  /**
+   * YARG's setlist, if the optional Setlist Bridge plugin is installed in the
+   * game. Like the venue stream it is purely additive: with no plugin it
+   * reports `available: false` and nothing else changes.
+   */
+  #setlist: SetlistBridge
   #librarySubscribers = new Set<(meta: LibraryMeta) => void>()
   #reloadSubscribers = new Set<() => void>()
 
@@ -88,6 +95,11 @@ export class AppState {
       getDataDir: () => this.#effective.yargDataDir,
       getPollIntervalMs: () => this.#effective.pollIntervalMs,
       resolveLibraryId: (hash) => (hash ? (this.#byHash.get(hash) ?? null) : null),
+    })
+
+    this.#setlist = new SetlistBridge({
+      getDataDir: () => this.#effective.yargDataDir,
+      resolveLibraryId: (hash) => this.#byHash.get(hash) ?? null,
     })
 
     // YARG rewrites its cache whenever it rescans, which is exactly when songs
@@ -113,6 +125,7 @@ export class AppState {
     await state.#watcher.start()
     await state.#cacheWatcher.start()
     state.#venue.start()
+    await state.#setlist.start()
     // Waits for `attach` before it spawns anything; see `index.ts`.
     state.#tunnel.setEnabled(state.#effective.tunnel)
 
@@ -245,6 +258,10 @@ export class AppState {
     return this.#venue
   }
 
+  get setlist(): SetlistBridge {
+    return this.#setlist
+  }
+
   /** Re-read the song list from disk and rebuild the hash join index. */
   async reloadLibrary(): Promise<SongLibrary> {
     this.#library = await loadLibraryFromCache(this.#effective.yargDataDir)
@@ -271,6 +288,7 @@ export class AppState {
 
     // A song may already be playing; re-resolve its library link.
     this.#watcher.refreshLibraryJoin()
+    this.#setlist.refreshLibraryJoin()
 
     this.#publishLibrary()
 
@@ -386,6 +404,7 @@ export class AppState {
       // own the way a path-reading poll could.
       await this.#cacheWatcher.start()
       await this.#watcher.rearm()
+      await this.#setlist.rearm()
       // Not forced: the persisted index is keyed to the directory it was built
       // from, so this cannot pick up the old install's paths, and flipping back
       // to a build already indexed costs a file read rather than a rescan.
@@ -409,6 +428,7 @@ export class AppState {
     this.#cacheWatcher.stop()
     this.#media.stopPrecompute()
     this.#venue.stop()
+    this.#setlist.stop()
     this.#tunnel.stop()
   }
 }
