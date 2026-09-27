@@ -6,9 +6,10 @@
  * process or a test without going through Hono.
  */
 
-import type { LibraryMeta, Setlist, Settings, SettingsView, SongLibrary } from '@shared/types.js'
+import type { LibraryMeta, Setlist, Settings, SettingsView, Song, SongLibrary } from '@shared/types.js'
+import type { QrCaption } from './core/setlistBridge.js'
 import { Guests } from './core/guests.js'
-import { encodeQr, shareAddress } from './core/shareCode.js'
+import { captionFor, encodeQr, shareAddress } from './core/shareCode.js'
 import { FileWatcher } from './core/fileWatcher.js'
 import { emptyLibrary, loadLibraryFromCache } from './core/library.js'
 import { NowPlayingWatcher } from './core/nowPlaying.js'
@@ -93,6 +94,8 @@ export class AppState {
   /** The address the plugin was last handed, so it is only sent when it changes. */
   #sharedAddress: string | null = null
   #shareTimer: NodeJS.Timeout | null = null
+  /** hash → song, for naming the next song under the code in YARG. */
+  #songByHash = new Map<string, Song>()
   #librarySubscribers = new Set<(meta: LibraryMeta) => void>()
   #reloadSubscribers = new Set<() => void>()
 
@@ -295,9 +298,18 @@ export class AppState {
     this.#syncShareCode()
     this.#shareTimer ??= setInterval(() => this.#syncShareCode(), 2000)
     this.#shareTimer.unref()
+    // The caption follows the setlist, and a renamed guest, straight away.
+    this.subscribeSetlist(() => this.#setlist.setCaption(this.#caption()))
+  }
+
+  /** The line under the code on YARG's score screens; see `captionFor`. */
+  #caption(): QrCaption | null {
+    return this.#effective.qrInYarg ? captionFor(this.setlistView, this.#songByHash) : null
   }
 
   #syncShareCode(): void {
+    this.#setlist.setCaption(this.#caption())
+
     const binding = this.#binding
     const address =
       binding === null || !this.#effective.qrInYarg
@@ -345,7 +357,9 @@ export class AppState {
     this.#library = await loadLibraryFromCache(this.#effective.yargDataDir)
 
     this.#byHash = new Map()
+    this.#songByHash = new Map()
     for (const song of this.#library.songs) {
+      if (song.hash && !this.#songByHash.has(song.hash)) this.#songByHash.set(song.hash, song)
       // First writer wins: duplicate charts share a hash, and either is a fine
       // target for the now-playing link.
       if (song.hash && !this.#byHash.has(song.hash)) {

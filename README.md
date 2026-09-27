@@ -88,7 +88,9 @@ YARG, guests can build and change the setlist from their phones:
 Without the plugin, YASS works exactly the same, just without the setlist.
 
 With plugin 0.3 or later, YARG also shows the guests' QR code itself: beside the main menu,
-in the music library's header, and on the score and song-failed screens. The code is the
+on the music library's album cover, and on the score and song-failed screens. With plugin 0.4
+or later, the score screens also show who's up next under the code: the guest's animal and
+name, and the next song. The code is the
 same one the YASS window shows, including the tunnel address when the tunnel is on. To hide
 it, for example while streaming, clear **Show the QR code in YARG** in the YASS settings.
 

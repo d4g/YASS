@@ -40,13 +40,33 @@ import type { Setlist, SetlistEditError } from '@shared/types.js'
 import { FileWatcher } from './fileWatcher.js'
 import { setlistBridgePath } from './paths.js'
 
-/** Protocol versions this client speaks. 1 is read-only; 2 adds edits; 3 adds the QR code. */
-const SUPPORTED_PROTOCOLS = new Set([1, 2, 3])
+/**
+ * Protocol versions this client speaks. 1 is read-only; 2 adds edits; 3 adds
+ * the QR code; 4 adds the caption under it.
+ */
+const SUPPORTED_PROTOCOLS = new Set([1, 2, 3, 4])
 
 /** The first protocol version that takes edit commands. */
 const EDIT_PROTOCOL = 2
 /** The plugin shows a QR code it is sent from this version on. */
 const QR_PROTOCOL = 3
+/** …and the next player and song under it, on the score screens, from this one. */
+const CAPTION_PROTOCOL = 4
+
+/**
+ * What YARG shows under the QR code on its score screens: who added the next
+ * song, and the song. Either may be missing; with both missing, nothing shows.
+ */
+export interface QrCaption {
+  player: {
+    name: string
+    /** `#rrggbb`. */
+    color: string
+    /** The guest's animal as a base64 PNG, because YARG cannot draw emoji from text. */
+    image: string | null
+  } | null
+  song: string | null
+}
 
 /**
  * A QR code for YARG to show: `size` modules a side, `modules` row by row,
@@ -216,6 +236,9 @@ export class SetlistBridge {
   #greeted = false
   /** The code YARG should be showing, or null for none. Sent again on every handshake. */
   #qr: QrGrid | null = null
+  /** The line under it, as sent, so an unchanged one is not sent again. */
+  #caption: QrCaption | null = null
+  #captionJson = 'null'
   /** Serialises checks: a watch event and the backstop can land together. */
   #checking = false
   #pending = false
@@ -335,6 +358,32 @@ export class SetlistBridge {
     socket.write(`${JSON.stringify(command)}\n`)
   }
 
+  /**
+   * Hand YARG the caption under the QR code — or null for none. Held and resent
+   * after every handshake, like the code; a plugin before protocol 4 never gets it.
+   */
+  setCaption(caption: QrCaption | null): void {
+    const json = JSON.stringify(caption)
+    if (json === this.#captionJson) return
+    this.#caption = caption
+    this.#captionJson = json
+    this.#sendCaption()
+  }
+
+  #sendCaption(): void {
+    const socket = this.#socket
+    if (socket === null || !this.#greeted || this.#protocol < CAPTION_PROTOCOL) return
+
+    const caption = this.#caption
+    const command = {
+      type: 'caption',
+      id: String(this.#nextId++),
+      player: caption?.player ?? null,
+      song: caption?.song ?? null,
+    }
+    socket.write(`${JSON.stringify(command)}\n`)
+  }
+
   /** Re-resolve the library join, e.g. after the song list is reloaded. */
   refreshLibraryJoin(): void {
     if (this.#raw !== null) this.#publishRaw(this.#raw)
@@ -448,6 +497,7 @@ export class SetlistBridge {
         console.log(`[setlist] connected to the YARG Setlist Bridge on port ${discovery.port}`)
         // A YARG that restarted has forgotten the code it was showing.
         this.#sendQrCode()
+        this.#sendCaption()
         return
       }
 

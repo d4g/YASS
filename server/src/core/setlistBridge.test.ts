@@ -43,7 +43,7 @@ describe('parseDiscovery', () => {
   })
 
   it('refuses a newer protocol rather than guessing at it', () => {
-    assert.equal(parseDiscovery('{"protocol":4,"port":36110,"token":"abc"}'), null)
+    assert.equal(parseDiscovery('{"protocol":5,"port":36110,"token":"abc"}'), null)
   })
 
   it('refuses a torn or incomplete file', () => {

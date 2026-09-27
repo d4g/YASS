@@ -14,8 +14,14 @@
 
 import qrcode from 'qrcode-generator'
 
-import type { QrGrid } from './setlistBridge.js'
+import type { Setlist, Song } from '@shared/types.js'
+import { GUEST_COLOR_HEX } from '@shared/types.js'
+import { GUEST_EMOJI_PNG } from './guestEmoji.js'
+import type { QrCaption, QrGrid } from './setlistBridge.js'
 import { lanAddresses } from './net.js'
+
+/** The plugin's limit for the song line; longer titles end in an ellipsis. */
+const MAX_SONG_LENGTH = 200
 
 /** Bind addresses that make the server reachable from other machines. */
 const LAN_HOSTS = new Set(['0.0.0.0', '::'])
@@ -54,4 +60,53 @@ export function encodeQr(text: string): QrGrid {
   }
 
   return { size, modules }
+}
+
+/**
+ * The line under the code on YARG's score screens: who added the next song,
+ * and the song, as "Artist – Title".
+ *
+ * Only while a show is on and there is a next song. The player only when a
+ * guest added it through YASS; a song added in YARG itself has the song line
+ * alone. With neither known, there is no caption at all.
+ */
+export function captionFor(
+  setlist: Setlist,
+  songByHash: ReadonlyMap<string, Pick<Song, 'artist' | 'name'>>,
+): QrCaption | null {
+  if (!setlist.available || setlist.mode !== 'playing' || setlist.index === null) return null
+
+  const next = setlist.songs[setlist.index + 1]
+  if (next === undefined) return null
+
+  const song = songByHash.get(next.hash)
+  const title = song === undefined ? null : clamp(`${song.artist} – ${song.name}`, MAX_SONG_LENGTH)
+  const tag = next.addedBy
+
+  if (title === null && tag === null) return null
+  return {
+    player:
+      tag === null
+        ? null
+        : { name: tag.name, color: GUEST_COLOR_HEX[tag.color], image: GUEST_EMOJI_PNG[tag.emoji] ?? null },
+    song: title,
+  }
+}
+
+/**
+ * Cut to `max` UTF-16 units, ending in an ellipsis.
+ *
+ * UTF-16 because that is what the plugin measures (C#'s `string.Length`), so a
+ * title of emoji or rare scripts is counted the way it will be checked. Cut
+ * between code points, so no character is split in half.
+ */
+function clamp(text: string, max: number): string {
+  if (text.length <= max) return text
+
+  let kept = ''
+  for (const char of text) {
+    if (kept.length + char.length > max - 1) break
+    kept += char
+  }
+  return `${kept}…`
 }

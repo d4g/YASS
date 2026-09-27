@@ -392,6 +392,22 @@ export const GUEST_COLORS = [
 
 export type GuestColor = (typeof GUEST_COLORS)[number]
 
+/**
+ * The same eight as hex, for places that cannot read the client's CSS — the
+ * Setlist Bridge plugin, which draws the next player's name in YARG. Keep in
+ * step with the `--guest-*` values in `client/src/index.css`.
+ */
+export const GUEST_COLOR_HEX: Readonly<Record<GuestColor, string>> = {
+  sky: '#45d8fe',
+  emerald: '#2be18d',
+  mustard: '#fcd548',
+  orange: '#ff8413',
+  pink: '#ff7ad9',
+  purple: '#b98bff',
+  red: '#ff5c66',
+  periwinkle: '#8fa2ff',
+}
+
 /** How a guest appears to everybody: "🦊 Fox", in their colour. */
 export interface GuestTag {
   emoji: string

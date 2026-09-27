@@ -19,6 +19,7 @@ YASS, and especially if you are selling it, read the upstream terms yourself.
 | Tables ported or transcribed from YARG's source | yes | yes |
 | ffmpeg | no | no — fetched by the user's own machine |
 | cloudflared | no | no — fetched by the user's own machine |
+| Twemoji pictures of the 40 guest animals | yes | yes |
 | npm dependencies | lockfile only | the ones the bundles pull in |
 
 Everything else — the server, the client, the tray app, the binary-format
@@ -116,6 +117,14 @@ make it rather than discover it.
 observed file layouts, with YARG named in the comments only as the reference
 implementation the behaviour was checked against. `YARG-DATA-FORMATS.md` is an
 original description of those formats. All of it is covered by the dedication.
+
+## Twemoji — `server/src/core/guestEmoji.ts`
+
+The 40 guest animals as 72×72 PNG pictures, from Twemoji v17.0.3
+(https://github.com/jdecked/twemoji), © Twitter, Inc. and other contributors, licensed
+under **CC-BY 4.0** (https://creativecommons.org/licenses/by/4.0/). Embedded unchanged, as
+base64, and sent to the YARG Setlist Bridge plugin so YARG can show a guest's animal: YARG
+has no font that draws colour emoji. `server/scripts/fetch-guest-emoji.py` fetches them.
 
 ## 5. Fetched at run time, never redistributed
 
