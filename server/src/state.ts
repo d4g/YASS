@@ -8,6 +8,7 @@
 
 import type { LibraryMeta, Setlist, Settings, SettingsView, SongLibrary } from '@shared/types.js'
 import { Guests } from './core/guests.js'
+import { encodeQr, shareAddress } from './core/shareCode.js'
 import { FileWatcher } from './core/fileWatcher.js'
 import { emptyLibrary, loadLibraryFromCache } from './core/library.js'
 import { NowPlayingWatcher } from './core/nowPlaying.js'
@@ -87,6 +88,11 @@ export class AppState {
   #setlist: SetlistBridge
   /** Who added which song to the setlist. See `core/guests.ts`. */
   #guests = new Guests()
+  /** Where this process is listening, once it is. The QR code for YARG needs it. */
+  #binding: { host: string; port: number } | null = null
+  /** The address the plugin was last handed, so it is only sent when it changes. */
+  #sharedAddress: string | null = null
+  #shareTimer: NodeJS.Timeout | null = null
   #librarySubscribers = new Set<(meta: LibraryMeta) => void>()
   #reloadSubscribers = new Set<() => void>()
 
@@ -276,6 +282,34 @@ export class AppState {
   }
 
   /**
+   * Called once the server is listening. From then on, YARG is kept showing the
+   * address a guest needs — see `core/shareCode.ts`.
+   *
+   * Checked on a short timer rather than on events: the address moves when the
+   * tunnel comes up or goes down, when the setting changes, and when the
+   * machine's network does, and one comparison every two seconds is cheaper
+   * than wiring all three.
+   */
+  shareFrom(host: string, port: number): void {
+    this.#binding = { host, port }
+    this.#syncShareCode()
+    this.#shareTimer ??= setInterval(() => this.#syncShareCode(), 2000)
+    this.#shareTimer.unref()
+  }
+
+  #syncShareCode(): void {
+    const binding = this.#binding
+    const address =
+      binding === null || !this.#effective.qrInYarg
+        ? null
+        : shareAddress({ tunnelUrl: this.#tunnel.shareUrl, host: binding.host, port: binding.port })
+
+    if (address === this.#sharedAddress) return
+    this.#sharedAddress = address
+    this.#setlist.setQrCode(address === null ? null : encodeQr(address))
+  }
+
+  /**
    * YARG's setlist with each song's "added by" filled in.
    *
    * What every client is sent. The bridge reports YARG; the tags are this
@@ -458,6 +492,8 @@ export class AppState {
     // Live, like the data directory: it needs no socket of its own, only a
     // child process, and the listener it points at is already open.
     this.#tunnel.setEnabled(this.#effective.tunnel)
+    // And the code in YARG, straight away rather than on the next tick.
+    this.#syncShareCode()
 
     return this.settingsView
   }
@@ -474,5 +510,6 @@ export class AppState {
     this.#venue.stop()
     this.#setlist.stop()
     this.#tunnel.stop()
+    if (this.#shareTimer !== null) clearInterval(this.#shareTimer)
   }
 }

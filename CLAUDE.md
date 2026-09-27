@@ -126,6 +126,12 @@ and just means "unavailable, retry". Like the venue stream it is purely additive
 the plugin the `setlist` event says `available: false` and the banner is unchanged. This is
 the one place the app talks to YARG's process rather than its files.
 
+**The guests' QR code is also shown inside YARG** (plugin protocol 3). `core/shareCode.ts`
+picks the address — the tunnel with its key while it is up, else the best LAN address, none
+for a loopback-only bind — and encodes it into a module grid. The bridge sends it after every
+handshake and whenever it changes, and the plugin only draws it. The `qrInYarg` setting turns
+it off, for a host who streams while the code carries the key.
+
 **Who added a song is YASS's own knowledge**, because YARG's setlist is only hashes.
 `server/src/core/guests.ts` hands a phone an animal emoji, its name and one of eight
 colours on its first add (the `X-YASS-Guest` header carries the id after that), and maps

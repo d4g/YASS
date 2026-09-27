@@ -473,6 +473,13 @@ export interface Settings {
    * key in the address the tray hands out. See `server/src/tunnel/tunnel.ts`.
    */
   tunnel: boolean
+  /**
+   * Show the guests' QR code inside YARG, through the Setlist Bridge plugin (0.3
+   * and up): on the main menu, in the music library, and on the score and
+   * song-failed screens. On by default; off for a host who streams the game
+   * while the code carries the tunnel's key.
+   */
+  qrInYarg: boolean
 }
 
 /**
@@ -565,6 +572,7 @@ export const ENV_VARS: Record<keyof Settings, string> = {
   host: 'YASS_HOST',
   port: 'YASS_PORT',
   tunnel: 'YASS_TUNNEL',
+  qrInYarg: 'YASS_QR_IN_YARG',
 }
 
 export interface SettingsView {

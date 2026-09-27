@@ -56,6 +56,8 @@ export function defaultSettings(): Settings {
     port: DEFAULT_PORT,
     // Off until the host asks: on means reachable from the internet.
     tunnel: false,
+    // On: a plugin that can show it is one the host installed on purpose.
+    qrInYarg: true,
   }
 }
 
@@ -104,6 +106,7 @@ export function normalizeSettings(raw: unknown): Settings {
     host: asString(input.host, defaults.host),
     port: clampPort(input.port, defaults.port),
     tunnel: typeof input.tunnel === 'boolean' ? input.tunnel : defaults.tunnel,
+    qrInYarg: typeof input.qrInYarg === 'boolean' ? input.qrInYarg : defaults.qrInYarg,
   }
 }
 
@@ -126,6 +129,9 @@ export function applyEnvOverrides(settings: Settings): Settings {
     host: env.YASS_HOST ?? settings.host,
     port: env.YASS_PORT ? clampPort(env.YASS_PORT, settings.port) : settings.port,
     tunnel: env.YASS_TUNNEL ? asBoolean(env.YASS_TUNNEL, settings.tunnel) : settings.tunnel,
+    qrInYarg: env.YASS_QR_IN_YARG
+      ? asBoolean(env.YASS_QR_IN_YARG, settings.qrInYarg)
+      : settings.qrInYarg,
   }
 }
 

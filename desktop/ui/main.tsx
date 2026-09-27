@@ -1441,6 +1441,33 @@ function App() {
             <span className="text-body text-content-muted">Start YASS when I sign in</span>
           </label>
 
+          {/*
+           * Saved on the spot, like the box above: it is a switch, not a field.
+           * Needs the Setlist Bridge plugin 0.3 or later in YARG; without it
+           * the box does nothing, which is also what the plugin would show.
+           */}
+          <label className="flex min-h-6 items-center gap-2.5">
+            <input
+              type="checkbox"
+              className={cx('size-4 accent-[var(--yarg-vivid-sky-blue)]', FOCUS)}
+              checked={state.view.settings.qrInYarg}
+              disabled={busy || locked('qrInYarg')}
+              onChange={(event) =>
+                void run(async () => {
+                  const outcome = await window.yass.saveSettings({ qrInYarg: event.target.checked })
+                  return outcome.state
+                })
+              }
+            />
+            <span className="text-body text-content-muted">
+              Show the QR code in YARG
+              <span className="block text-note text-content-faint">
+                Needs the YARG Setlist Bridge plugin 0.3 or later.
+                {locked('qrInYarg') ? ` Set by ${ENV_VARS.qrInYarg}.` : ''}
+              </span>
+            </span>
+          </label>
+
           <UpdateRow
             state={state}
             busy={busy}

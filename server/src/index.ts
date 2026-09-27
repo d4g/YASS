@@ -66,6 +66,8 @@ async function main(): Promise<void> {
   }
 
   const server = serve({ fetch: app.fetch, hostname: host, port }, (info) => {
+    // Only now is there an address worth putting on YARG's screen.
+    state.shareFrom(host, info.port)
     console.log(`\n  YASS  →  http://localhost:${info.port}`)
 
     if (host === '0.0.0.0') {

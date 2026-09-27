@@ -40,11 +40,22 @@ import type { Setlist, SetlistEditError } from '@shared/types.js'
 import { FileWatcher } from './fileWatcher.js'
 import { setlistBridgePath } from './paths.js'
 
-/** Protocol versions this client speaks. 1 is read-only; 2 adds edits. */
-const SUPPORTED_PROTOCOLS = new Set([1, 2])
+/** Protocol versions this client speaks. 1 is read-only; 2 adds edits; 3 adds the QR code. */
+const SUPPORTED_PROTOCOLS = new Set([1, 2, 3])
 
 /** The first protocol version that takes edit commands. */
 const EDIT_PROTOCOL = 2
+/** The plugin shows a QR code it is sent from this version on. */
+const QR_PROTOCOL = 3
+
+/**
+ * A QR code for YARG to show: `size` modules a side, `modules` row by row,
+ * `1` dark and `0` light. The plugin draws it; it has no encoder of its own.
+ */
+export interface QrGrid {
+  size: number
+  modules: string
+}
 
 /**
  * How long an edit may take to be answered.
@@ -201,6 +212,10 @@ export class SetlistBridge {
   /** Edits sent and not yet answered, by command id. */
   #inFlight = new Map<string, (result: SetlistEditResult) => void>()
   #nextId = 1
+  /** Past the handshake on the current socket; commands may only follow it. */
+  #greeted = false
+  /** The code YARG should be showing, or null for none. Sent again on every handshake. */
+  #qr: QrGrid | null = null
   /** Serialises checks: a watch event and the backstop can land together. */
   #checking = false
   #pending = false
@@ -294,6 +309,32 @@ export class SetlistBridge {
     })
   }
 
+  /**
+   * Hand YARG the QR code to show — or null to take it away.
+   *
+   * Held rather than only sent: YARG forgets it whenever the game restarts, so
+   * it goes out again after every handshake. A plugin older than protocol 3
+   * never gets it, and draws nothing, which is all it could do anyway.
+   */
+  setQrCode(grid: QrGrid | null): void {
+    if (grid?.modules === this.#qr?.modules && grid?.size === this.#qr?.size) return
+    this.#qr = grid
+    this.#sendQrCode()
+  }
+
+  #sendQrCode(): void {
+    const socket = this.#socket
+    if (socket === null || !this.#greeted || this.#protocol < QR_PROTOCOL) return
+
+    const grid = this.#qr
+    // Its `result` comes back like an edit's; nobody is waiting on it, so
+    // `#settle` drops it as it does a late answer.
+    const command = grid === null
+      ? { type: 'qr', id: String(this.#nextId++), modules: null }
+      : { type: 'qr', id: String(this.#nextId++), size: grid.size, modules: grid.modules }
+    socket.write(`${JSON.stringify(command)}\n`)
+  }
+
   /** Re-resolve the library join, e.g. after the song list is reloaded. */
   refreshLibraryJoin(): void {
     if (this.#raw !== null) this.#publishRaw(this.#raw)
@@ -353,6 +394,7 @@ export class SetlistBridge {
     this.#socket = socket
     this.#connectedTo = key
     this.#protocol = discovery.protocol
+    this.#greeted = false
 
     socket.setTimeout(CONNECT_TIMEOUT_MS)
     socket.on('timeout', () => socket.destroy())
@@ -402,7 +444,10 @@ export class SetlistBridge {
         // changes, which can be hours at a quiet party.
         socket.setTimeout(0)
         this.#reported = null
+        this.#greeted = true
         console.log(`[setlist] connected to the YARG Setlist Bridge on port ${discovery.port}`)
+        // A YARG that restarted has forgotten the code it was showing.
+        this.#sendQrCode()
         return
       }
 

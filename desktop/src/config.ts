@@ -51,6 +51,7 @@ const EDITABLE: ReadonlyArray<keyof Settings> = [
   'host',
   'port',
   'tunnel',
+  'qrInYarg',
 ]
 
 export function sanitizePatch(raw: unknown): Partial<Settings> {

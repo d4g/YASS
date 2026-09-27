@@ -173,6 +173,13 @@ export class Tunnel {
     this.#phase = 'off'
   }
 
+  /** The address to hand a guest, key included, while the tunnel is up; otherwise null. */
+  get shareUrl(): string | null {
+    return this.#phase === 'running' && this.#publicUrl !== null
+      ? shareUrl(this.#publicUrl, this.#key)
+      : null
+  }
+
   /** What the tray shows. The URL carries the key, so this is host-only. */
   async summary(): Promise<TunnelSummary> {
     const cloudflared = (await resolveCloudflared()) !== null
