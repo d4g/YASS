@@ -5,7 +5,7 @@
  * and behind a reverse proxy on a custom domain.
  */
 
-import type { NowPlaying, SetlistEditError, SongLibrary } from '@shared/types'
+import type { NowPlaying, Setlist, SetlistEditError, SongLibrary } from '@shared/types'
 import { mockArtUrl } from '../mock/art'
 
 /**
@@ -43,6 +43,10 @@ export function fetchLibrary(): Promise<SongLibrary> {
 
 export function fetchNowPlaying(): Promise<NowPlaying> {
   return getJson<NowPlaying>('/api/now-playing')
+}
+
+export function fetchSetlist(): Promise<Setlist> {
+  return getJson<Setlist>('/api/setlist')
 }
 
 // --- Setlist edits -----------------------------------------------------------

@@ -144,8 +144,8 @@ decides, rather than a header that can be forged or left out, nothing that
 cloudflared forwards can skip the gate.
 
 Quick tunnels don't carry SSE, so `/api/events` returns 204 when `viaTunnel` is set.
-`EventSource` treats that as final, and the client polls now-playing instead
-(`isStreamDeclined` in `client/src/lib/events.ts`). The tunnel doesn't count as
+`EventSource` treats that as final, and the client polls now-playing and the setlist
+instead (`isStreamDeclined` in `client/src/lib/events.ts`). The tunnel doesn't count as
 `running` until Cloudflare's resolver can find the hostname. Showing the QR code any
 earlier lets a phone's router cache an NXDOMAIN for the address.
 
