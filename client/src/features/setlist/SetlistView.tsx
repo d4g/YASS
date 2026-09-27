@@ -20,15 +20,26 @@
  * change arrives back over the event stream — this component never edits its
  * own copy of the list, so what a guest sees is always what YARG has.
  *
- * **Reordering is two buttons, not a drag.** A drag on a phone fights the
- * scroll it lives in, and has no keyboard or screen-reader equivalent without
- * building one; up and down are both of those already. Each move carries the
- * setlist version it was made against, so two guests reordering at once get a
- * "the setlist just changed" instead of a song landing somewhere nobody meant.
+ * **Reordering is a drag, with buttons behind it.** A drag on a phone fights
+ * the scroll it lives in, so it starts only from a grip at the row's end, and
+ * the rest of the row still scrolls — see `dragReorder.ts`. Up and down stay
+ * as buttons, because they are the keyboard's and the screen reader's way to
+ * do the same thing; on a touch screen they step out of sight, where the grip
+ * does their job and the title needs the room, and stay in the reading order.
+ * Each move carries the setlist version it was made against, so two guests
+ * reordering at once get a "the setlist just changed" instead of a song
+ * landing somewhere nobody meant.
+ *
+ * **A drop shows its result straight away.** The list is YARG's, and the new
+ * order only exists once YARG says so — over the tunnel that is a poll, up to
+ * two seconds later. Snapping the row back to where it came from in the
+ * meantime reads as the drop having failed. So the dropped order is drawn until
+ * the setlist moves on from the version it was made against, or the edit is
+ * refused.
  */
 
 import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import type { Setlist, SetlistEditError, SetlistEntry, Song } from '@shared/types'
 import { Button, cx, EmptyState } from '../../ui'
@@ -40,6 +51,7 @@ import {
   type SetlistEditOutcome,
 } from '../../lib/api'
 import { formatDuration, formatTitleCredit } from '../../lib/format'
+import { reorder, useDragReorder } from './dragReorder'
 import { describeSetlistError } from './messages'
 
 /** How long the armed `clear` waits for its second press before disarming. */
@@ -64,6 +76,11 @@ export function SetlistView({
   const [error, setError] = useState<SetlistEditError | null>(null)
   const [clearArmed, setClearArmed] = useState(false)
   const disarm = useRef<number | null>(null)
+  const listRef = useRef<HTMLOListElement>(null)
+  /** A drop YARG has not answered yet, drawn as if it had. */
+  const [dropped, setDropped] = useState<{ from: number; to: number; version: number } | null>(
+    null,
+  )
 
   useEffect(
     () => () => {
@@ -79,13 +96,36 @@ export function SetlistView({
   const editable = setlist.editable
   const version = setlist.version ?? undefined
 
+  // Only while the setlist is still the one the drop was made against; any
+  // newer version is YARG's answer, and it wins.
+  const preview = dropped !== null && dropped.version === setlist.version ? dropped : null
+  const songs = preview ? reorder(setlist.songs, preview.from, preview.to) : setlist.songs
+
   const run = async (edit: () => Promise<SetlistEditOutcome>) => {
     setPending(true)
     setError(null)
     const outcome = await edit()
     setPending(false)
-    if (!outcome.ok) setError(outcome.error)
+    if (!outcome.ok) {
+      setError(outcome.error)
+      setDropped(null)
+    }
   }
+
+  const { drag, gripProps, rowStyle } = useDragReorder({
+    listRef,
+    min: firstEditable,
+    max: total - 1,
+    onDrop: (from, to) => {
+      const entry = setlist.songs[from]
+      if (entry === undefined || setlist.version === null) return
+      setDropped({ from, to, version: setlist.version })
+      void run(() => moveInSetlist(entry.hash, to, version))
+    },
+  })
+
+  // A grip only where there is somewhere to drag to.
+  const canDrag = editable && !pending && preview === null && total - firstEditable > 1
 
   /*
    * Two presses, because one wipes the evening's queue for everyone in the
@@ -164,10 +204,15 @@ export function SetlistView({
         </EmptyState>
       ) : (
         <ol
+          ref={listRef}
           aria-label="Setlist"
-          className="scrollbar-slim min-h-0 flex-1 overflow-y-auto bg-surface-card"
+          className={cx(
+            // `relative` so each row's `offsetTop` is measured from the list.
+            'scrollbar-slim relative min-h-0 flex-1 overflow-y-auto bg-surface-card',
+            drag && 'select-none',
+          )}
         >
-          {setlist.songs.map((entry, position) => {
+          {songs.map((entry, position) => {
             const song = entry.libraryId === null ? undefined : songsById.get(entry.libraryId)
             const isCurrent = position === current
             const canEdit = editable && position >= firstEditable
@@ -184,11 +229,19 @@ export function SetlistView({
                 isPlayed={current !== null && position < current}
                 isSelected={song !== undefined && song.id === selectedId}
                 onSelect={song === undefined ? null : () => onSelect(song)}
+                style={rowStyle(position)}
+                dragging={drag?.from === position}
+                grip={
+                  canDrag && canEdit ? (
+                    <DragGrip {...gripProps(position)} />
+                  ) : null
+                }
                 controls={
                   canEdit ? (
                     <>
                       <RowButton
                         label={`Move ${name} up`}
+                        className="pointer-coarse:sr-only"
                         disabled={pending || position <= firstEditable}
                         onClick={() =>
                           void run(() => moveInSetlist(entry.hash, position - 1, version))
@@ -198,6 +251,7 @@ export function SetlistView({
                       </RowButton>
                       <RowButton
                         label={`Move ${name} down`}
+                        className="pointer-coarse:sr-only"
                         disabled={pending || position >= total - 1}
                         onClick={() =>
                           void run(() => moveInSetlist(entry.hash, position + 1, version))
@@ -245,6 +299,9 @@ function SetlistRow({
   isPlayed,
   isSelected,
   onSelect,
+  style,
+  dragging,
+  grip,
   controls,
 }: {
   entry: SetlistEntry
@@ -256,6 +313,11 @@ function SetlistRow({
   isSelected: boolean
   /** Null for a chart the library doesn't have: there are no details to open. */
   onSelect: (() => void) | null
+  /** Where a drag is drawing this row, if one is on. */
+  style: CSSProperties | undefined
+  /** This is the row being dragged. */
+  dragging: boolean
+  grip: ReactNode
   controls: ReactNode
 }) {
   // The library row's two marks, for the same two reasons: see `SongList`.
@@ -307,6 +369,8 @@ function SetlistRow({
             : 'bg-surface-card',
         // History stays legible but steps back: nothing about it can change.
         isPlayed && 'opacity-60',
+        // Lifted off the list while it is carried, in the hover colour.
+        dragging && 'bg-surface-hover',
       )}
       style={{
         borderTop: playingBorder
@@ -320,6 +384,7 @@ function SetlistRow({
         boxShadow: isSelected
           ? 'inset 0 0 0 var(--stroke) var(--yarg-vivid-sky-blue)'
           : undefined,
+        ...style,
       }}
     >
       <span className="font-numeric w-[24px] shrink-0 text-right text-[14px] tabular-nums text-count-muted">
@@ -354,6 +419,7 @@ function SetlistRow({
       )}
 
       {controls ? <span className="flex shrink-0 items-center">{controls}</span> : null}
+      {grip}
     </li>
   )
 }
@@ -361,11 +427,13 @@ function SetlistRow({
 /** A quiet, icon-only control; `Button` supplies the touch target on a coarse pointer. */
 function RowButton({
   label,
+  className,
   disabled,
   onClick,
   children,
 }: {
   label: string
+  className?: string
   disabled: boolean
   onClick: () => void
   children: ReactNode
@@ -373,7 +441,7 @@ function RowButton({
   return (
     <Button
       quiet
-      className="px-[10px]"
+      className={cx('px-[10px]', className)}
       aria-label={label}
       title={label}
       disabled={disabled}
@@ -384,7 +452,42 @@ function RowButton({
   )
 }
 
+/**
+ * The handle a drag starts from.
+ *
+ * Hidden from assistive technology: the up and down buttons beside it are the
+ * accessible way to move a row, and a control that only answers to a pointer
+ * would be one more stop that does nothing. `touch-action: none` is what lets
+ * a finger drag it instead of scrolling the list.
+ */
+function DragGrip(props: { onPointerDown: (event: React.PointerEvent<HTMLElement>) => void }) {
+  return (
+    <span
+      {...props}
+      aria-hidden
+      title="Drag to reorder"
+      className={cx(
+        'flex h-full w-[40px] shrink-0 cursor-grab touch-none items-center justify-center',
+        'text-content-muted hover:text-white active:cursor-grabbing',
+        'pointer-coarse:w-[48px]',
+      )}
+    >
+      <GripIcon />
+    </span>
+  )
+}
+
 // Glyphs in the same hand as `SortArrow` and `ChevronRight`: 1.75 stroke, round caps.
+
+function GripIcon() {
+  return (
+    <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden>
+      {[2, 8, 14].map((y) =>
+        [2, 8].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" />),
+      )}
+    </svg>
+  )
+}
 
 function ArrowIcon({ direction }: { direction: 'up' | 'down' }) {
   return (

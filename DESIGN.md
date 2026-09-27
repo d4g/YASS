@@ -382,8 +382,12 @@ toolbar while a setlist exists. Its bar sits where the toolbar sits, bottom on a
 upright. Rows restate the song row: card surface, hairlines, cover then title over artist,
 the playing wash and white border on the current song. A position number leads each row;
 played songs step back to 60% opacity and carry no controls. Editable rows end in three
-quiet icon buttons: up, down, remove. **Clear** takes two presses, turning danger-red on the
-first; there is no modal.
+quiet icon buttons (up, down, remove) and a **grip**, a six-dot handle in muted content
+colour that a row is dragged by. A carried row takes the hover surface and the bar shadow,
+and the rows it passes step aside; played songs are never a drop target. On a coarse
+pointer, up and down are visually hidden but stay for screen readers, so a phone row shows
+remove and the grip and the title keeps its width. **Clear** takes two presses, turning
+danger-red on the first; there is no modal.
 
 ### Art Plate (signature)
 A square slot on Sunken Night with a Selected Blue wash from the top corner. Until real art
