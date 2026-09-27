@@ -6,7 +6,7 @@
 >
 > - **Editing YARG's setlist from a phone.** This needs the
 >   [YARG Setlist Bridge](https://github.com/d4g/YARG-Setlist-Bridge) plugin installed
->   in YARG; see [Optional: show YARG's setlist](#optional-show-yargs-setlist). Upstream
+>   in YARG; see [Optional: show and edit YARG's setlist](#optional-show-and-edit-yargs-setlist). Upstream
 >   prefers to wait for native setlist support in YARG instead of a plugin (see
 >   [DevPrice/YASS#4](https://github.com/DevPrice/YASS/issues/4)), so this stays in the fork.
 > - **Sharing beyond your Wi-Fi** through a Cloudflare tunnel, with a key in the QR code.
@@ -72,13 +72,90 @@ Cloudflare's quick tunnels don't carry live updates.
 If YASS doesn't find your songs, open the popover, expand **Settings**, and set **YARG data
 folder** to the folder that contains `songcache.bin`.
 
-### Optional: show YARG's setlist
+### Optional: show and edit YARG's setlist
 
-YARG doesn't save its setlist anywhere YASS can read. If you install the
-[YARG Setlist Bridge](https://github.com/d4g/YARG-Setlist-Bridge) plugin into YARG, the
-now-playing banner also shows where a show is (for example `2/8`) and which song is next,
-and guests can add songs to the setlist from a song's details. Without the plugin, YASS
-works exactly the same, just without that.
+YARG keeps its setlist in memory and doesn't save it anywhere YASS can read. With the
+[YARG Setlist Bridge](https://github.com/d4g/YARG-Setlist-Bridge) plugin installed in
+YARG, guests can build and change the setlist from their phones:
+
+- **Add to setlist** from any song's details. YARG shows a notification for it, except
+  during gameplay.
+- **The setlist view** lets anyone reorder songs, remove them, or clear the list, both
+  before a show and during one.
+- **The now-playing banner** shows where a show is (for example `2/8`) and which song is
+  next, or that a setlist is ready to start.
+
+Without the plugin, YASS works exactly the same, just without the setlist.
+
+![Adding a song to YARG's setlist from its details in YASS](docs/images/setlist-add.png)
+
+![The setlist view in YASS, with songs to reorder or remove](docs/images/setlist-view.png)
+
+To set it up, install [BepInEx 5](https://github.com/BepInEx/BepInEx/releases) and the
+plugin into your YARG folder, as described in the
+[plugin's README](https://github.com/d4g/YARG-Setlist-Bridge#install). YASS finds it by
+itself, with nothing to configure. Updating YARG through its launcher can remove BepInEx,
+so you might have to install it again afterwards.
+
+#### How it works
+
+The plugin runs inside YARG and makes the setlist available on `127.0.0.1` only. YASS
+talks to it the same way it already follows YARG's files:
+
+```mermaid
+flowchart LR
+    phones["Guests' phones<br/>(YASS web client)"]
+
+    subgraph host["Host PC"]
+        yass["YASS server<br/>(Node, tray app)"]
+        cache[("songcache.bin")]
+        disco[("setlist-bridge.json<br/>port + per-launch token")]
+
+        subgraph yarg["YARG process (Unity, Mono)"]
+            bepinex["BepInEx 5"] -->|loads| plugin["Setlist Bridge plugin"]
+            plugin -->|"reads and edits public members<br/>on the main thread"| setlist[("YARG's setlist in memory<br/>library setlist / show list")]
+        end
+    end
+
+    phones <-->|"HTTP + SSE<br/>/api/setlist, /api/events"| yass
+    yass -->|reads| cache
+    plugin -->|writes on start| disco
+    yass -->|watches| disco
+    yass <-->|"NDJSON over TCP 127.0.0.1<br/>state down, commands up"| plugin
+```
+
+- **Discovery:** the plugin writes `setlist-bridge.json`, holding its port and a token
+  that changes every launch, into YARG's data folder next to `songcache.bin`.
+- **Reading:** about four times a second, the plugin reads the setlist from wherever YARG
+  keeps it at that moment. Before a show, that's the music library's setlist; during a
+  show, it's the show list and its position. Every change is pushed to YASS.
+- **Editing:** commands (add, remove, move, clear) run on YARG's main thread, and YARG
+  answers each one. The changed setlist then arrives like any other update:
+
+```mermaid
+sequenceDiagram
+    participant G as Guest's phone
+    participant Y as YASS server
+    participant P as Bridge plugin
+    participant R as YARG main thread
+    G->>Y: POST /api/setlist/songs (hash)
+    Y->>P: add (id, hash, version)
+    P->>R: queued, applied next frame
+    P-->>Y: result (id, ok)
+    Y-->>G: 200 ok
+    P-->>Y: state (version + 1, songs...)
+    Y-->>G: SSE "setlist" to every phone
+```
+
+YARG's own rules still apply. During a show, the songs already played and the one playing
+can't be changed, and each song can only be in the setlist once. Edits that depend on
+positions carry the version they were made against, so when two people reorder at once,
+the second gets "the setlist changed, try again" instead of a song landing in the wrong
+place. The wire format is in the plugin's
+[PROTOCOL.md](https://github.com/d4g/YARG-Setlist-Bridge/blob/main/PROTOCOL.md).
+
+The plugin is a stand-in until YARG supports this natively. YASS only depends on the small
+protocol, not on how the plugin works, so native support can replace it later.
 
 ## Build from source
 
