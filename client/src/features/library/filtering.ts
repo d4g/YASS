@@ -79,12 +79,18 @@ export const UNKNOWN = -1
  * nobody standing in a room has ever narrowed four thousand songs by container
  * format. It was in the panel because the CSV has a column for it, which is the
  * wrong reason for a control to exist. The server still tallies the facet
- * alongside `charters` and `playlists`, neither of which the UI has ever drawn.
+ * alongside `charters`, which the UI has never drawn, and `playlists`, which it
+ * now does — as `folders`, YARG's name for the same thing.
  */
 export interface Filters {
   search: string
   sources: string[]
   genres: string[]
+  /**
+   * `Song.playlist` values — YARG's "Folder": the folder a song was found in,
+   * unless its chart names a playlist. Named for what the screen calls it.
+   */
+  folders: string[]
   /** `Song.ageRating` display strings — members of `AGE_RATINGS`, never ordinals. */
   ratings: string[]
   /** Decade start years — `1980` for the eighties. `UNKNOWN` for undated charts. */
@@ -109,6 +115,7 @@ export const EMPTY_FILTERS: Filters = {
   search: '',
   sources: [],
   genres: [],
+  folders: [],
   ratings: [],
   decades: [],
   vocals: [],
@@ -150,6 +157,7 @@ export function panelFilterCount(filters: Filters): number {
   return (
     (filters.sources.length > 0 ? 1 : 0) +
     (filters.genres.length > 0 ? 1 : 0) +
+    (filters.folders.length > 0 ? 1 : 0) +
     (filters.ratings.length > 0 ? 1 : 0) +
     (filters.decades.length > 0 ? 1 : 0) +
     (filters.vocals.length > 0 ? 1 : 0) +
@@ -314,6 +322,7 @@ export function filterSongs(
   // is now the normal case rather than the pathological one.
   const sources = new Set(filters.sources)
   const genres = new Set(filters.genres)
+  const folders = new Set(filters.folders)
   const ratings = new Set(filters.ratings)
   const decades = new Set(filters.decades)
   const vocals = new Set(filters.vocals)
@@ -323,6 +332,7 @@ export function filterSongs(
   return songs.filter((song) => {
     if (sources.size > 0 && !sources.has(song.source)) return false
     if (genres.size > 0 && !genres.has(song.genre)) return false
+    if (folders.size > 0 && !folders.has(song.playlist)) return false
     // Matched on the display string the server already resolved, so an unrated
     // chart is selectable by the `No Rating` chip like any other value rather
     // than being a hole in the dimension.

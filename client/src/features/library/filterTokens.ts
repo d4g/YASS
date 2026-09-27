@@ -32,7 +32,7 @@ import type { Filters } from './filtering'
 
 /** Which control a token came from, and what taking it off means. */
 export type TokenRemoval =
-  | { dimension: 'sources' | 'genres' | 'ratings'; value: string }
+  | { dimension: 'sources' | 'genres' | 'folders' | 'ratings'; value: string }
   | { dimension: 'decades' | 'vocals' | 'lengths' | 'intensities'; value: number }
   | { dimension: 'instruments'; value: InstrumentGroup }
   | { dimension: 'masterOnly' }
@@ -209,6 +209,16 @@ export function describeFilters(filters: Filters, lens: DifficultyLens): Describ
     })
   }
 
+  for (const folder of filters.folders) {
+    tokens.push({
+      id: `folders:${folder}`,
+      kind: 'filter',
+      dimension: 'folder',
+      label: folder,
+      removal: { dimension: 'folders', value: folder },
+    })
+  }
+
   return tokens
 }
 
@@ -227,6 +237,7 @@ export function withoutToken(filters: Filters, removal: TokenRemoval): Filters {
       return filters
     case 'sources':
     case 'genres':
+    case 'folders':
     case 'ratings':
       return {
         ...filters,

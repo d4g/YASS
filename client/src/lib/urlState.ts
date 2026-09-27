@@ -70,6 +70,7 @@ const PARAM = {
   search: 'q',
   sources: 'src',
   genres: 'gen',
+  folders: 'dir',
   ratings: 'rated',
   decades: 'dec',
   vocals: 'voc',
@@ -206,6 +207,7 @@ export function encodeAppState(state: AppState): string {
 
   list(PARAM.sources, encodeList(filters.sources))
   list(PARAM.genres, encodeList(filters.genres))
+  list(PARAM.folders, encodeList(filters.folders))
   // The display strings, not the ordinals behind them. `rated=Family+Friendly`
   // is longer than `rated=0` and is the only one of the two a person reading
   // the address bar can check, which is what this whole file is for.
@@ -254,6 +256,7 @@ export function decodeAppState(search: string): AppState {
     search: params.get(PARAM.search) ?? '',
     sources: decodeStrings(params.get(PARAM.sources)),
     genres: decodeStrings(params.get(PARAM.genres)),
+    folders: decodeStrings(params.get(PARAM.folders)),
     // Unvalidated against `AGE_RATINGS` on purpose, like every other string
     // dimension here: a value the library no longer contains matches nothing,
     // which is a result the UI already draws, and dropping it would silently

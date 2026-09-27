@@ -253,7 +253,7 @@ export function FiltersPanel({
   }
 
   /** Add or remove one value from any of the string-valued dimensions. */
-  const toggle = <K extends 'sources' | 'genres' | 'ratings'>(key: K, value: string) => {
+  const toggle = <K extends 'sources' | 'genres' | 'folders' | 'ratings'>(key: K, value: string) => {
     update(key, toggleValue(filters[key], value) as Filters[K])
   }
 
@@ -838,7 +838,7 @@ export function FiltersPanel({
           </FilterSection>
         </div>
 
-        {/* The two open sets. Collapsed until asked for; see the file header. */}
+        {/* The three open sets. Collapsed until asked for; see the file header. */}
         <div className="grid grid-cols-1 items-start gap-[20px] @2xl/list:grid-cols-2">
           <FacetPicker
             label="source"
@@ -858,6 +858,19 @@ export function FiltersPanel({
             selected={filters.genres}
             onToggle={(value) => toggle('genres', value)}
             onClear={() => update('genres', [])}
+          />
+          {/*
+           * YARG's "Folder": the folder a song was found in, unless its chart
+           * names a playlist. The server has always tallied it as `playlists`;
+           * the values are YARG's own, `Unknown Playlist` included, so the
+           * filter says what the game's folder sort says.
+           */}
+          <FacetPicker
+            label="folder"
+            options={facets.playlists}
+            selected={filters.folders}
+            onToggle={(value) => toggle('folders', value)}
+            onClear={() => update('folders', [])}
           />
         </div>
       </Disclosure>
