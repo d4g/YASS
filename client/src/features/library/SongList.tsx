@@ -594,8 +594,9 @@ export function SongList({
                      * `listitem`s and nothing else, and every value these group
                      * by is already on the row or in its detail — the artist, the
                      * year, the letter the title starts with, the date added.
-                     * Playlist is the one exception, left off the detail pane on
-                     * purpose — see the note there. Announcing each
+                     * Folder is the one exception, left off the detail pane on
+                     * purpose — see the note there — and on the row only in its
+                     * optional column. Announcing each
                      * header would put a second copy of that in the way of
                      * someone moving through four thousand songs one at a time.
                      */
@@ -1173,6 +1174,13 @@ function WideCell({
       return (
         <div className={cx(column.box, 'truncate text-[15px] text-content-muted')}>
           {song.genre || '—'}
+        </div>
+      )
+
+    case 'folder':
+      return (
+        <div dir="auto" className={cx(column.box, 'truncate text-[15px] text-content-muted')}>
+          {song.playlist || '—'}
         </div>
       )
 

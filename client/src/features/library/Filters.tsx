@@ -132,7 +132,7 @@ const SORTS: ReadonlyArray<{ key: SortKey; label: string; spoken?: string }> = [
   { key: 'genre', label: 'Genre' },
   { key: 'subgenre', label: 'Subgenre' },
   { key: 'source', label: 'Source' },
-  { key: 'playlist', label: 'Playlist' },
+  { key: 'playlist', label: 'Folder' },
   { key: 'charter', label: 'Charter' },
   { key: 'added', label: 'Added', spoken: 'Date added' },
 ]

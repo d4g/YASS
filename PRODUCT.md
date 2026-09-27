@@ -53,7 +53,7 @@ host's machine, not a separate service or account.
 ## Capabilities and Constraints
 
 - **Read-only toward YARG.** YASS never writes to the game's files.
-- **Browse:** sort (including by artist in album running order, charter, subgenre, playlist,
+- **Browse:** sort (including by artist in album running order, charter, subgenre, folder,
   date added), filter, search; per-song detail with instruments, difficulty, source, length,
   year, genre.
 - **Media:** album art and audio previews, extracted from the charts by ffmpeg, which is

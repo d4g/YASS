@@ -88,7 +88,7 @@ describe('the table', () => {
 
     assert.equal(offered.includes('name'), false)
     assert.equal(offered.includes('artist'), false)
-    assert.equal(offered.length, 7)
+    assert.equal(offered.length, 8)
   })
 
   it('draws the fixed columns whatever the preference says', () => {
@@ -131,24 +131,25 @@ describe('orderings the header cannot offer', () => {
   const keys = (visible: readonly Column[]) =>
     headerlessSorts(visible, 'band').map((sort) => sort.key)
 
-  it('always offers the four that have no column', () => {
+  it('always offers the three that have no column', () => {
     const everything = COLUMNS.filter((entry) => entry.key !== null)
-    assert.deepEqual(keys(everything), ['charter', 'subgenre', 'playlist', 'added'])
+    assert.deepEqual(keys(everything), ['charter', 'subgenre', 'added'])
   })
 
   it('takes over the sort of any column that is not drawn', () => {
     // The default table at 900px: album, genre and source are waiting for
-    // width, and diff is off. `parts` is not an ordering and never appears.
+    // width, and folder and diff are off. `parts` is not an ordering and never
+    // appears.
     const drawn = COLUMNS.filter((entry) => showsColumn(DEFAULT_VIEW, entry, 900))
 
     assert.deepEqual(keys(drawn), [
       'album',
       'genre',
+      'playlist',
       'difficulty',
       'source',
       'charter',
       'subgenre',
-      'playlist',
       'added',
     ])
   })

@@ -17,12 +17,12 @@
  * this is not.
  *
  * Chips rather than a checklist, because the filter panel is already a wall of
- * chips and a column is the same kind of thing: one of a closed set of seven,
+ * chips and a column is the same kind of thing: one of a closed set of eight,
  * on or off, everything visible at once, no scrolling and no search box.
  *
  * ## It is also where the sorts without a column live
  *
- * Charter, subgenre, playlist and date added have no column, and a column that
+ * Charter, subgenre and date added have no column, and a column that
  * is switched off takes its header with it. Their chips go here, above the
  * columns, because this corner is already the one control over the whole
  * table, and anywhere else in the header would take width from a label.

@@ -218,7 +218,7 @@ const MARKERS: Partial<Record<SortKey, (song: Song, lens: DifficultyLens) => Mar
   // Same safety as genre: each of these sorts on the string it is lettered by.
   subgenre: (song) => letterMark(song.subgenre, 'No subgenre'),
   charter: (song) => letterMark(song.charter, 'No charter'),
-  playlist: (song) => letterMark(song.playlist, 'No playlist'),
+  playlist: (song) => letterMark(song.playlist, 'No folder'),
   source: sourceMark,
   year: yearMark,
   difficulty: intensityMark,
@@ -233,7 +233,7 @@ const INDEX_LABELS: Record<SortKey, string> = {
   genre: 'genre',
   subgenre: 'subgenre',
   charter: 'charter',
-  playlist: 'playlist',
+  playlist: 'folder',
   source: 'source',
   year: 'year',
   difficulty: 'difficulty',

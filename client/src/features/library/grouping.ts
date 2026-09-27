@@ -30,7 +30,7 @@
  * left out once, on the guess that a header per charter would be a header per
  * row. A real 4,231-song library has 64 charters, most of it credited to one of
  * three. And once a list can be sorted by something the table does not draw —
- * charter, subgenre, playlist, date added — the headers are the only place the
+ * charter, subgenre, folder, date added — the headers are the only place the
  * value it was sorted by appears at all, which makes them the proof the order
  * is what it claims.
  *
@@ -215,7 +215,7 @@ const GROUPERS: Partial<Record<SortKey, (song: Song, lens: DifficultyLens) => Gr
   genre: (song) => valueGroup(song.genre, 'No genre'),
   subgenre: (song) => valueGroup(song.subgenre, 'No subgenre'),
   charter: (song) => valueGroup(song.charter, 'No charter'),
-  playlist: (song) => valueGroup(song.playlist, 'No playlist'),
+  playlist: (song) => valueGroup(song.playlist, 'No folder'),
   source: sourceGroup,
   year: yearGroup,
   difficulty: intensityGroup,

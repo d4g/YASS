@@ -52,6 +52,7 @@ export type ColumnId =
   | 'artist'
   | 'album'
   | 'genre'
+  | 'folder'
   | 'year'
   | 'length'
   | 'parts'
@@ -160,6 +161,15 @@ export const COLUMNS: readonly Column[] = [
   },
   { id: 'album', label: 'album', key: 'album', box: 'flex-[2] min-w-0', minList: 1152 },
   { id: 'genre', label: 'genre', key: 'genre', box: 'w-32 shrink-0', minList: 1280 },
+  /*
+   * YARG's "Folder" sort, under its name. YARG calls the field behind it the
+   * playlist — the folder a song was found in, unless the chart names one — and
+   * so do the song cache and this app's sort key, which is why the key is
+   * `playlist` and old links that say so still work. Off by default: most
+   * libraries are a handful of folders, and the column earns its width only for
+   * a host who organises by them.
+   */
+  { id: 'folder', label: 'folder', key: 'playlist', box: 'w-44 shrink-0', minList: 1280 },
   {
     id: 'year',
     label: 'year',
@@ -190,7 +200,7 @@ export const COLUMNS: readonly Column[] = [
   { id: 'source', label: 'source', key: 'source', box: 'w-40 shrink-0', minList: 1024 },
 ]
 
-/** The seven the picker offers. Order follows the table, so the two agree. */
+/** The eight the picker offers. Order follows the table, so the two agree. */
 export const OPTIONAL_COLUMNS: readonly Column[] = COLUMNS.filter((column) => column.fixed !== true)
 
 /**
@@ -227,13 +237,12 @@ export interface HeaderlessSort {
  * The orderings no column exists for, whatever the table is showing.
  *
  * `added` rather than `date added` on the chip: the chips sit in a panel headed
- * `sort by`, and beside `charter` and `playlist` the one word is enough. The
+ * `sort by`, and beside `charter` and `subgenre` the one word is enough. The
  * accessible name has no heading beside it to lean on.
  */
 const COLUMNLESS_SORTS: readonly HeaderlessSort[] = [
   { key: 'charter', label: 'charter', spoken: 'charter' },
   { key: 'subgenre', label: 'subgenre', spoken: 'subgenre' },
-  { key: 'playlist', label: 'playlist', spoken: 'playlist' },
   { key: 'added', label: 'added', spoken: 'date added' },
 ]
 
