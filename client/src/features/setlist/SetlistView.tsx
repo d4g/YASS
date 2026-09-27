@@ -30,6 +30,14 @@
  * reordering at once get a "the setlist just changed" instead of a song
  * landing somewhere nobody meant.
  *
+ * **Played songs step out of the way, by default.** A long show piles its
+ * history above the part anyone came to see — what is playing and what is
+ * next — so a toggle in the bar hides everything before the playing song, and
+ * starts on. It is there only once something has been played; before that it
+ * would switch nothing. The playing song always stays, and the numbers stay
+ * the setlist's own, so the list reads 4, 5, 6 beside a banner saying 4/8.
+ * Each phone remembers the choice, the way the library remembers its columns.
+ *
  * **A drop shows its result straight away.** The list is YARG's, and the new
  * order only exists once YARG says so — over the tunnel that is a poll, up to
  * two seconds later. Snapping the row back to where it came from in the
@@ -42,7 +50,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import type { Setlist, SetlistEditError, SetlistEntry, Song } from '@shared/types'
-import { Button, cx, EmptyState } from '../../ui'
+import { Button, cx, EmptyState, ToggleChip } from '../../ui'
 import { AlbumThumb, ArtistName, SongTitle } from '../../ui/library'
 import {
   clearSetlist,
@@ -58,6 +66,28 @@ import { describeSetlistError } from './messages'
 
 /** How long the armed `clear` waits for its second press before disarming. */
 const CLEAR_CONFIRM_MS = 4000
+
+const HIDE_PLAYED_KEY = 'yass.setlist.hidePlayed'
+
+/**
+ * On unless this phone turned it off. Storage can throw — private browsing, a
+ * locked-down webview — and then the default is the answer, as in `columns.ts`.
+ */
+function readHidePlayed(): boolean {
+  try {
+    return window.localStorage.getItem(HIDE_PLAYED_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
+
+function writeHidePlayed(hide: boolean): void {
+  try {
+    window.localStorage.setItem(HIDE_PLAYED_KEY, String(hide))
+  } catch {
+    // Honoured for this page only.
+  }
+}
 
 export function SetlistView({
   setlist,
@@ -79,6 +109,7 @@ export function SetlistView({
   const [clearArmed, setClearArmed] = useState(false)
   const disarm = useRef<number | null>(null)
   const listRef = useRef<HTMLOListElement>(null)
+  const [hidePlayed, setHidePlayed] = useState(readHidePlayed)
   /** A drop YARG has not answered yet, drawn as if it had. */
   const [dropped, setDropped] = useState<{ from: number; to: number; version: number } | null>(
     null,
@@ -103,6 +134,10 @@ export function SetlistView({
   const preview = dropped !== null && dropped.version === setlist.version ? dropped : null
   const songs = preview ? reorder(setlist.songs, preview.from, preview.to) : setlist.songs
 
+  // Everything before the playing song, when there is any.
+  const played = current ?? 0
+  const firstShown = hidePlayed ? played : 0
+
   const run = async (edit: () => Promise<SetlistEditOutcome>) => {
     setPending(true)
     setError(null)
@@ -118,6 +153,7 @@ export function SetlistView({
     listRef,
     min: firstEditable,
     max: total - 1,
+    firstIndex: firstShown,
     onDrop: (from, to) => {
       const entry = setlist.songs[from]
       if (entry === undefined || setlist.version === null) return
@@ -174,6 +210,22 @@ export function SetlistView({
           <p className="min-w-0 truncate text-[14px] text-content-muted">{summary(setlist)}</p>
         </div>
 
+        {played > 0 ? (
+          <span className="shrink-0">
+            <ToggleChip
+              active={hidePlayed}
+              onClick={() => {
+                writeHidePlayed(!hidePlayed)
+                setHidePlayed(!hidePlayed)
+              }}
+              label={`Hide the ${played} ${played === 1 ? 'song' : 'songs'} already played`}
+            >
+              hide played
+              <span className="font-numeric tabular-nums">{played}</span>
+            </ToggleChip>
+          </span>
+        ) : null}
+
         {canClear ? (
           <Button
             className="shrink-0 bar-stack:px-[14px]"
@@ -216,7 +268,9 @@ export function SetlistView({
             drag && 'select-none',
           )}
         >
-          {songs.map((entry, position) => {
+          {songs.slice(firstShown).map((entry, shown) => {
+            // The setlist's own position, whatever is hidden above it.
+            const position = firstShown + shown
             const song = entry.libraryId === null ? undefined : songsById.get(entry.libraryId)
             const isCurrent = position === current
             const canEdit = editable && position >= firstEditable

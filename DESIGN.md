@@ -386,8 +386,11 @@ quiet icon buttons (up, down, remove) and a **grip**, a six-dot handle in muted 
 colour that a row is dragged by. A carried row takes the hover surface and the bar shadow,
 and the rows it passes step aside; played songs are never a drop target. On a coarse
 pointer, up and down are visually hidden but stay for screen readers, so a phone row shows
-remove and the grip and the title keeps its width. **Clear** takes two presses, turning
-danger-red on the first; there is no modal.
+remove and the grip and the title keeps its width. Once a show has played a song, a
+**hide played** toggle chip (with the count) joins the bar, on by default and remembered
+per device: it hides the rows before the playing song, whose position numbers stay the
+setlist's own. **Clear** takes two presses, turning danger-red on the first; there is no
+modal.
 
 ### Guest Tag
 Who added a setlist song: the guest's animal emoji and name ("🦊 Fox") on a pill, the text

@@ -90,12 +90,19 @@ export function useDragReorder({
   listRef,
   min,
   max,
+  firstIndex = 0,
   onDrop,
 }: {
   listRef: RefObject<HTMLElement | null>
   /** The first and last index a row may be dropped at. */
   min: number
   max: number
+  /**
+   * The index of the list's first rendered row, when earlier ones are not drawn
+   * — played songs hidden, say. Indices stay the setlist's own throughout; this
+   * is only how the rows on screen line up with them.
+   */
+  firstIndex?: number
   onDrop: (from: number, to: number) => void
 }) {
   const [drag, setDrag] = useState<Drag | null>(null)
@@ -170,10 +177,15 @@ export function useDragReorder({
       // No text selection, no native drag of the icon, no synthetic click.
       event.preventDefault()
 
-      const rows = Array.from(list.children, (child) => {
-        const row = child as HTMLElement
-        return { top: row.offsetTop, height: row.offsetHeight }
-      })
+      // Rows that aren't drawn are never a drop target — `min` is past them —
+      // so an empty box stands in for each, just to keep indices lined up.
+      const rows: RowBox[] = [
+        ...Array.from({ length: firstIndex }, () => ({ top: 0, height: 0 })),
+        ...Array.from(list.children, (child) => {
+          const row = child as HTMLElement
+          return { top: row.offsetTop, height: row.offsetHeight }
+        }),
+      ]
       if (rows.length <= index) return
 
       live.current = {
